@@ -1834,6 +1834,8 @@ a { color: var(--green-700); }
 .qz-paste { background: var(--surface); }
 .nav-badge { background: #b4483c; }
 
+.done-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+
 /* 제목 앞 이모지 */
 .title-emoji {
   display: inline-block;
@@ -1923,7 +1925,7 @@ window.SITE_CONFIG = {
     semester: "2026학년도 1학기",
     // 사이트 버전 — 제목 오른쪽에 빨간 글씨로 표시됩니다.
     // 관리자 화면에서 저장할 때마다 마지막 자리가 1씩 자동으로 올라갑니다 (v1.0.0 → v1.0.1).
-    version: "v1.0.1",
+    version: "v1.0.2",
     logoText: "中",
   },
 
@@ -1934,7 +1936,7 @@ window.SITE_CONFIG = {
     { id: "curriculum", label: "커리큘럼" },
     { id: "calendar", label: "달력" },
     { id: "poll", label: "투표" },
-    { id: "apply", label: "수강 신청" },
+    { id: "apply", label: "회원가입" },
     { id: "classroom", label: "내 강의실" },
     { id: "quiz", label: "퀴즈" },
     { id: "faq", label: "FAQ" },
@@ -1950,7 +1952,7 @@ window.SITE_CONFIG = {
     description:
       "교양중국어1에서 익힌 병음과 기초 표현을 바탕으로 일상 회화를 넓히고, AI 도구로 단어·문장 데이터를 모으고 분석하며 스스로 공부하는 힘을 기릅니다.",
     buttons: [
-      { label: "수강 신청", href: "#apply", primary: true },
+      { label: "회원가입", href: "#apply", primary: true },
       { label: "커리큘럼 보기", href: "#curriculum", primary: false },
     ],
     /* 첫 화면 오른쪽 죽간에 세로로 쓰일 글귀 (한 줄 = 죽간 한 쪽, 오른쪽부터 읽힘) */
@@ -2143,33 +2145,38 @@ window.SITE_CONFIG = {
 
   /* 수강 신청서 — required: 필수, pattern: 형식 검사(정규식), wide: 한 줄 전체 사용 */
   apply: {
-    title: "수강 신청",
-    lead: "신청서를 작성해 제출해 주세요. 별표(*)는 꼭 입력해야 하는 항목입니다.",
+    title: "회원가입",
+    lead: "회원가입 후 「내 강의실」에서 아이디와 비밀번호로 로그인할 수 있습니다. 별표(*)는 꼭 입력해야 하는 항목입니다.",
+    submitLabel: "가입하기",
+    /* type: "password"인 칸은 그대로 저장하지 않고 비밀번호는 해시값으로만 저장합니다. matches: 값이 같아야 하는 칸 */
     fields: [
+      { name: "userId", label: "아이디", type: "text", required: true, placeholder: "영문 소문자·숫자 4~20자", pattern: "^[a-z0-9_]{4,20}$", patternMsg: "아이디는 영문 소문자·숫자·밑줄(_)로 4~20자입니다.", autocomplete: "username" },
+      { name: "password", label: "비밀번호", type: "password", required: true, placeholder: "영문과 숫자를 섞어 8자 이상", pattern: "^(?=.*[A-Za-z])(?=.*\\d).{8,64}$", patternMsg: "비밀번호는 영문과 숫자를 섞어 8자 이상으로 정해 주세요.", autocomplete: "new-password" },
+      { name: "passwordConfirm", label: "비밀번호 확인", type: "password", required: true, placeholder: "비밀번호를 한 번 더 입력", matches: "password", matchMsg: "비밀번호가 서로 다릅니다.", autocomplete: "new-password" },
       { name: "name", label: "이름", type: "text", required: true, placeholder: "홍길동", autocomplete: "name" },
       { name: "studentId", label: "학번", type: "text", required: true, placeholder: "2024123456", pattern: "^\\d{10}$", patternMsg: "학번은 숫자 10자리로 입력해 주세요.", inputmode: "numeric" },
       { name: "major", label: "학과", type: "text", required: true, placeholder: "경영학과" },
       { name: "year", label: "학년", type: "select", required: true, options: ["1학년", "2학년", "3학년", "4학년", "5학년 이상"] },
       { name: "email", label: "이메일", type: "email", required: true, placeholder: "name@korea.ac.kr", pattern: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$", patternMsg: "이메일 형식이 올바르지 않습니다.", autocomplete: "email" },
-      { name: "phone", label: "연락처", type: "tel", required: true, placeholder: "010-1234-5678", pattern: "^01[016789]-?\\d{3,4}-?\\d{4}$", patternMsg: "연락처는 010-1234-5678 형식으로 입력해 주세요.", autocomplete: "tel" },
+      { name: "phone", label: "휴대폰", type: "tel", required: true, placeholder: "010-1234-5678", pattern: "^01[016789]-?\\d{3,4}-?\\d{4}$", patternMsg: "휴대폰 번호는 010-1234-5678 형식으로 입력해 주세요.", autocomplete: "tel", inputmode: "tel" },
       { name: "level", label: "중국어 학습 경험", type: "radio", required: true, wide: true, options: ["교양중국어1 이수", "독학 · 학원 경험", "처음 배움"] },
       { name: "motive", label: "수강 동기", type: "textarea", required: false, wide: true, placeholder: "이 수업에서 기대하는 점을 자유롭게 적어 주세요." },
       { name: "agree", label: "개인정보 수집·이용(수강 관리 목적)에 동의합니다", type: "checkbox", required: true, wide: true },
     ],
-    successTitle: "신청서가 접수되었습니다",
-    successText: "수강 확정 안내는 입력한 이메일로 보내 드립니다.",
+    successTitle: "회원가입이 완료되었습니다",
+    successText: "이제 「내 강의실」에서 아이디와 비밀번호로 로그인할 수 있습니다.",
   },
 
   /* 내 강의실 — 로그인, 출석 체크, 과제 제출 */
   classroom: {
     title: "내 강의실",
-    lead: "학번과 이름으로 로그인해 출석을 체크하고 과제 파일을 제출하세요.",
+    lead: "회원가입한 아이디와 비밀번호로 로그인해 출석을 체크하고 과제 파일을 제출하세요.",
     // true: 시연용으로 지난 수업도 출석 체크할 수 있습니다. 실제 운영 때는 false로 바꾸면 수업 당일에만 체크됩니다.
     testMode: true,
     allowLate: true, // 마감 후 제출 허용 (지각으로 표시)
     maxFileMB: 20,
     accept: ".pdf,.hwp,.hwpx,.doc,.docx,.ppt,.pptx,.xlsx,.mp3,.m4a,.wav,.jpg,.png,.zip",
-    loginNote: "시연용 로그인입니다. 실제 운영 때는 구글 로그인으로 바꿀 수 있습니다.",
+    loginNote: "아직 계정이 없다면 위쪽 「회원가입」에서 먼저 가입하세요. 비밀번호는 해시값으로만 이 브라우저에 저장됩니다.",
   },
 
   /* 실시간 퀴즈 — server.py로 사이트를 열었을 때 작동합니다.
@@ -2195,9 +2202,9 @@ window.SITE_CONFIG = {
     delay: 2500, // 사이트에 들어온 뒤 몇 밀리초 뒤에 띄울지 (2500 = 2.5초)
     badge: "2026 상반기 집중 프로그램",
     title: "교양중국어2 수강 신청 안내",
-    text: "정원 20명 소규모 수업입니다. 신청서를 먼저 제출한 순서대로 수강을 확정합니다.",
+    text: "정원 20명 소규모 수업입니다. 회원가입을 먼저 한 순서대로 수강을 확정합니다.",
     points: ["신청 기간: [2026.02.16 – 02.27]", "대상: 교양중국어1 이수 학부생", "준비물: 노트북, Google 계정"],
-    cta: { label: "신청서 작성하기", href: "#apply" },
+    cta: { label: "회원가입하기", href: "#apply" },
   },
 
   /* 첫 방문 환영 */
@@ -3281,7 +3288,7 @@ window.SiteStore = (function () {
         '<form class="card apply-form" novalidate>' +
         '<div class="error-summary" role="alert" tabindex="-1" hidden></div>' +
         '<div class="form-grid">' + list(ap.fields, fieldHTML) + "</div>" +
-        '<div class="form-actions"><button class="btn btn-primary" type="submit">신청서 제출</button></div>' +
+        '<div class="form-actions"><button class="btn btn-primary" type="submit">' + esc(ap.submitLabel || "제출") + "</button></div>" +
         "</form>"
     );
     var form = document.querySelector(".apply-form");
@@ -3330,6 +3337,10 @@ window.SiteStore = (function () {
         else msg = f.label + eulReul(f.label) + " 입력해 주세요.";
       } else if (val && f.pattern && !new RegExp(f.pattern).test(val)) {
         msg = f.patternMsg || f.label + " 형식을 확인해 주세요.";
+      } else if (val && f.matches && val !== fieldValue(form, ap.fields.filter(function (x) { return x.name === f.matches; })[0])) {
+        msg = f.matchMsg || f.label + "이(가) 일치하지 않습니다.";
+      } else if (val && f.name === "userId" && findMember(val)) {
+        msg = "이미 사용 중인 아이디입니다. 다른 아이디를 정해 주세요.";
       }
       showFieldError(f.name, msg);
       if (msg) errors.push({ id: "ap-" + f.name + (f.type === "radio" ? "-0" : ""), msg: msg });
@@ -3348,8 +3359,43 @@ window.SiteStore = (function () {
     }
     summary.hidden = true;
 
+    /* 비밀번호는 그대로 저장하지 않고 무작위 salt를 붙인 SHA-256 해시로만 저장 */
+    var pw = data.password;
+    ap.fields.forEach(function (f) { if (f.type === "password") delete data[f.name]; });
+    var submitBtn = form.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    var salt = randomSalt();
+    hashPassword(salt, pw).then(function (hash) {
+      data.pwSalt = salt;
+      data.pwHash = hash;
+      finishSignup(form, summary, data);
+    }, function () {
+      submitBtn.disabled = false;
+      summary.innerHTML = "<strong>비밀번호를 처리하지 못했습니다.</strong> 페이지를 새로고침한 뒤 다시 시도해 주세요.";
+      summary.hidden = false;
+      summary.focus();
+    });
+  }
+
+  function randomSalt() {
+    var a = new Uint8Array(12);
+    (window.crypto || {}).getRandomValues ? crypto.getRandomValues(a) : a.forEach(function (_, i) { a[i] = Math.random() * 256; });
+    return Array.prototype.map.call(a, function (x) { return (x < 16 ? "0" : "") + x.toString(16); }).join("");
+  }
+  function hashPassword(salt, pw) {
+    if (!window.SiteAdmin || !window.SiteAdmin.sha256) return Promise.reject(new Error("no hash"));
+    return window.SiteAdmin.sha256("kc2-member:" + salt + ":" + pw);
+  }
+  /* 아이디로 가입 기록 찾기 (같은 아이디가 여러 번 있으면 마지막 것) */
+  function findMember(userId) {
+    var all = S.listApplications().filter(function (r) { return r.data && r.data.userId === userId; });
+    return all[all.length - 1] || null;
+  }
+
+  function finishSignup(form, summary, data) {
     var rec = S.submitApplication(data);
     if (!rec) {
+      form.querySelector('button[type="submit"]').disabled = false;
       summary.innerHTML = "<strong>이 브라우저에서는 저장할 수 없습니다.</strong> 개인정보 보호 모드인지 확인해 주세요.";
       summary.hidden = false;
       summary.focus();
@@ -3361,22 +3407,25 @@ window.SiteStore = (function () {
         '<div class="card apply-done" tabindex="-1">' +
         '<span class="done-mark" aria-hidden="true">✓</span>' +
         "<h3>" + esc(ap.successTitle) + "</h3>" +
-        '<p class="done-no">접수번호 <strong>' + esc(rec.no) + "</strong> · " + esc(fmtTime(rec.at)) + "</p>" +
+        '<p class="done-no">회원번호 <strong>' + esc(rec.no) + "</strong> · " + esc(fmtTime(rec.at)) + "</p>" +
         "<p>" + esc(ap.successText) + "</p>" +
         '<dl class="done-summary">' +
         list(ap.fields.filter(function (f) { return f.type !== "checkbox" && data[f.name]; }), function (f) {
           return "<div><dt>" + esc(f.label) + "</dt><dd>" + esc(data[f.name]) + "</dd></div>";
         }) +
         "</dl>" +
-        '<button class="btn btn-ghost apply-again" type="button">새 신청서 작성</button>' +
+        '<div class="done-actions"><a class="btn btn-primary" href="#classroom">내 강의실에서 로그인</a>' +
+        '<button class="btn btn-ghost apply-again" type="button">다른 계정 가입</button></div>' +
         "</div>"
     );
     var done = document.querySelector(".apply-done");
     done.focus();
     done.querySelector(".apply-again").addEventListener("click", function () {
       renderApplyForm();
-      document.getElementById("ap-name").focus();
+      document.getElementById("ap-" + ap.fields[0].name).focus();
     });
+    var loginId = document.querySelector(".login-form [name=loginId]");
+    if (loginId && data.userId) loginId.value = data.userId;
   }
 
   /* ===================== 내 강의실 ===================== */
@@ -3395,38 +3444,50 @@ window.SiteStore = (function () {
       U.sectionHead(cr.title, cr.lead) +
         '<form class="card login-form" novalidate>' +
         '<h3>로그인</h3>' +
-        '<div class="field" data-field="loginId"><label for="login-id">학번</label>' +
-        '<input id="login-id" name="loginId" inputmode="numeric" autocomplete="username" placeholder="2024123456" aria-describedby="login-id-err" />' +
+        '<div class="field" data-field="loginId"><label for="login-id">아이디</label>' +
+        '<input id="login-id" name="loginId" autocomplete="username" autocapitalize="off" placeholder="가입한 아이디" aria-describedby="login-id-err" />' +
         '<p class="field-error" id="login-id-err" hidden></p></div>' +
-        '<div class="field" data-field="loginName"><label for="login-name">이름</label>' +
-        '<input id="login-name" name="loginName" autocomplete="name" placeholder="홍길동" aria-describedby="login-name-err" />' +
-        '<p class="field-error" id="login-name-err" hidden></p></div>' +
+        '<div class="field" data-field="loginPw"><label for="login-pw">비밀번호</label>' +
+        '<input id="login-pw" name="loginPw" type="password" autocomplete="current-password" aria-describedby="login-pw-err" />' +
+        '<p class="field-error" id="login-pw-err" hidden></p></div>' +
         '<button class="btn btn-primary" type="submit">로그인</button>' +
-        '<p class="small-note">' + esc(cr.loginNote) + "</p>" +
+        '<p class="small-note">' + esc(cr.loginNote) + ' <a href="#apply">회원가입하기</a></p>' +
         "</form>"
     );
     var form = document.querySelector(".login-form");
-    form.addEventListener("submit", function (e) {
-      e.preventDefault();
-      var id = form.elements.loginId.value.trim();
-      var name = form.elements.loginName.value.trim();
-      var idMsg = !id ? "학번을 입력해 주세요." : /^\d{10}$/.test(id) ? "" : "학번은 숫자 10자리로 입력해 주세요.";
-      var nameMsg = name ? "" : "이름을 입력해 주세요.";
-      var roster = S.getRoster();
-      if (!idMsg && !nameMsg && roster.length) {
-        var found = roster.some(function (s) { return s.id === id && s.name === name; });
-        if (!found) idMsg = "수강생 명단에 없습니다. 학번과 이름을 확인해 주세요.";
-      }
-      [["loginId", idMsg], ["loginName", nameMsg]].forEach(function (pair) {
+    function showErrors(idMsg, pwMsg) {
+      [["loginId", idMsg], ["loginPw", pwMsg]].forEach(function (pair) {
         var box = form.querySelector('[data-field="' + pair[0] + '"]');
         var err = box.querySelector(".field-error");
         err.textContent = pair[1];
         err.hidden = !pair[1];
         box.classList.toggle("has-error", !!pair[1]);
       });
-      if (idMsg) return form.elements.loginId.focus();
-      if (nameMsg) return form.elements.loginName.focus();
-      S.login(id, name);
+      if (idMsg) form.elements.loginId.focus();
+      else if (pwMsg) form.elements.loginPw.focus();
+    }
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var id = form.elements.loginId.value.trim().toLowerCase();
+      var pw = form.elements.loginPw.value;
+      if (!id || !pw) return showErrors(id ? "" : "아이디를 입력해 주세요.", pw ? "" : "비밀번호를 입력해 주세요.");
+      var member = findMember(id);
+      if (!member || !member.data.pwHash) return showErrors("가입되지 않은 아이디입니다. 먼저 회원가입을 해 주세요.", "");
+      hashPassword(member.data.pwSalt, pw).then(function (hash) {
+        if (hash !== member.data.pwHash) {
+          form.elements.loginPw.value = "";
+          return showErrors("", "비밀번호가 맞지 않습니다.");
+        }
+        /* 수강생 명단이 등록되어 있으면 명단에 있는 학번만 로그인 */
+        var roster = S.getRoster();
+        if (roster.length && !roster.some(function (s) { return s.id === member.data.studentId; })) {
+          return showErrors("수강생 명단에 없는 계정입니다. 교수자에게 문의해 주세요.", "");
+        }
+        showErrors("", "");
+        S.login(member.data.studentId, member.data.name);
+      }, function () {
+        showErrors("", "로그인을 처리하지 못했습니다. 페이지를 새로고침해 주세요.");
+      });
     });
   }
 
@@ -4088,7 +4149,7 @@ window.SiteStore = (function () {
     { id: "notices", label: "공지" },
     { id: "attendance", label: "출석 현황" },
     { id: "submissions", label: "과제 제출" },
-    { id: "applications", label: "수강 신청" },
+    { id: "applications", label: "회원 목록" },
     { id: "settings", label: "설정 파일" },
   ];
 
@@ -4136,7 +4197,7 @@ window.SiteStore = (function () {
       '<p class="form-msg roster-msg" aria-live="polite"></p>' +
       '<div class="ad-actions">' +
       '<label class="btn btn-ghost btn-sm file-btn">CSV 불러오기<input type="file" accept=".csv,text/csv" class="roster-csv" /></label>' +
-      '<button class="btn btn-ghost btn-sm" type="button" data-action="roster-from-apps">수강 신청자 모두 추가</button>' +
+      '<button class="btn btn-ghost btn-sm" type="button" data-action="roster-from-apps">가입 회원 모두 추가</button>' +
       '<button class="btn btn-ghost btn-sm" type="button" data-action="roster-download">명단 CSV 내려받기</button>' +
       "</div>" +
       '<p class="ad-help small">CSV 형식: 학번,이름,학과,이메일 (첫 줄 제목은 있어도 없어도 됩니다)</p>' +
@@ -4222,7 +4283,7 @@ window.SiteStore = (function () {
       )
     );
   }
-  function appFields() { return C.apply.fields.filter(function (f) { return f.type !== "checkbox"; }); }
+  function appFields() { return C.apply.fields.filter(function (f) { return f.type !== "checkbox" && f.type !== "password"; }); }
   function applicationRows(forCSV) {
     return S.listApplications().map(function (r, i) {
       var cells = [r.no, fmtTime(r.at)].concat(appFields().map(function (f) { return r.data[f.name] || ""; }));
@@ -4234,10 +4295,10 @@ window.SiteStore = (function () {
     return (
       '<div class="ad-actions">' +
       '<button class="btn btn-primary btn-sm" type="button" data-action="csv-applications">엑셀용 CSV 내려받기</button>' +
-      '<button class="btn btn-ghost btn-sm" type="button" data-action="roster-from-apps">신청자 모두 명단에 추가</button>' +
+      '<button class="btn btn-ghost btn-sm" type="button" data-action="roster-from-apps">가입 회원 모두 명단에 추가</button>' +
       "</div>" +
       '<p class="form-msg app-msg" aria-live="polite"></p>' +
-      tableHTML(["접수번호", "접수 일시"].concat(appFields().map(function (f) { return f.label; })).concat([""]), applicationRows(false), "접수된 신청서가 없습니다.", "wide")
+      tableHTML(["회원번호", "가입 일시"].concat(appFields().map(function (f) { return f.label; })).concat([""]), applicationRows(false), "가입한 회원이 없습니다.", "wide")
     );
   }
   function tabSettings() {
@@ -4618,7 +4679,7 @@ window.SiteStore = (function () {
       }
       case "roster-from-apps": {
         var apps = S.listApplications().filter(function (r) { return r.data && /^\d{10}$/.test(r.data.studentId || ""); });
-        if (!apps.length) return flash(currentTab === "roster" ? ".roster-msg" : ".app-msg", "추가할 신청자가 없습니다.", "error");
+        if (!apps.length) return flash(currentTab === "roster" ? ".roster-msg" : ".app-msg", "추가할 회원이 없습니다.", "error");
         var res = upsertRoster(apps.map(appToEntry));
         renderTab(true);
         return flash(currentTab === "roster" ? ".roster-msg" : ".app-msg", "명단에 추가 " + res.added + "명, 수정 " + res.updated + "명", "ok");
@@ -4649,8 +4710,8 @@ window.SiteStore = (function () {
         );
       case "csv-applications":
         return download(
-          "수강신청_" + stamp() + ".csv",
-          toCSV([["접수번호", "접수 일시"].concat(appFields().map(function (f) { return f.label; }))].concat(applicationRows(true))),
+          "회원목록_" + stamp() + ".csv",
+          toCSV([["회원번호", "가입 일시"].concat(appFields().map(function (f) { return f.label; }))].concat(applicationRows(true))),
           "text/csv;charset=utf-8"
         );
       case "notice-del": {
@@ -4785,6 +4846,7 @@ window.SiteStore = (function () {
       openLogin();
     },
     toCSV: toCSV,
+    sha256: sha256,
     download: download,
   };
 
