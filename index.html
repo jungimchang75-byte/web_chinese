@@ -1973,7 +1973,7 @@ window.SITE_CONFIG = {
     semester: "2026학년도 1학기",
     // 사이트 버전 — 제목 오른쪽에 빨간 글씨로 표시됩니다.
     // 관리자 화면에서 저장할 때마다 마지막 자리가 1씩 자동으로 올라갑니다 (v1.0.0 → v1.0.1).
-    version: "v1.1.8",
+    version: "v1.1.9",
     logoText: "漢",
   },
 
@@ -4610,6 +4610,15 @@ window.SiteStore = (function () {
       '<div class="ad-card"><h4>모든 방문자에게 적용 (index.html 내보내기)</h4>' +
       "<p>지금 내용을 넣은 새 index.html을 만듭니다. 사이트 폴더의 index.html을 이 파일로 바꾼 뒤 다시 배포하면 모든 방문자에게 보입니다.</p>" +
       '<div class="ad-actions"><button class="btn btn-ghost btn-sm" type="button" data-action="export-index">index.html 내려받기</button></div></div>' +
+      (function () {
+        var bk = S.prefGet("bazeKey", "");
+        return (
+          '<div class="ad-card"><h4>🔑 API 키</h4>' +
+          "<p>실시간 퀴즈의 AI 문제 출제에 쓰는 Claude API 키와 BAZE API 키를 관리합니다.</p>" +
+          '<p>BAZE API 키 (이 브라우저): <span class="chip ' + (bk ? "chip-ok" : "chip-miss") + '">' + (bk ? "저장됨 " + esc(maskKey(bk)) : "없음") + "</span></p>" +
+          '<div class="ad-actions"><button class="btn btn-primary btn-sm" type="button" data-action="goto-apikeys">API 키 설정 열기</button></div></div>'
+        );
+      })() +
       '<div class="ad-card"><h4>원래대로 되돌리기</h4>' +
       "<p>이 브라우저에 저장된 수정 내용을 지우고 index.html에 들어 있는 원래 설정으로 돌아갑니다. (명단·공지·기록은 그대로)</p>" +
       '<div class="ad-actions"><button class="btn btn-ghost btn-sm danger" type="button" data-action="reset-config"' + (S.hasSavedConfig() ? "" : " disabled") + ">원래대로</button></div></div>" +
@@ -5097,6 +5106,10 @@ window.SiteStore = (function () {
       case "notice-cancel":
         editingNotice = null;
         return renderTab(true);
+      case "goto-apikeys":
+        currentTab = "apikeys";
+        session(TAB_KEY, currentTab);
+        return renderTab();
       case "apikey-refresh":
         serverHealth = null;
         return renderTab(true);
