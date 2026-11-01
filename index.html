@@ -1879,7 +1879,10 @@ a { color: var(--green-700); }
 @keyframes titleSway { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
 @media (prefers-reduced-motion: reduce) { .title-emoji { animation: none; } }
 
-/* 제목 오른쪽 버전 표시 */
+/* 헤더 사이트 이름 오른쪽 버전 표시 */
+.brand-text strong { display: flex; align-items: baseline; gap: 6px; }
+.brand-version { margin-left: 0 !important; font-size: 11px !important; vertical-align: baseline !important; }
+.brand-version:empty { display: none; }
 .version-tag {
   display: inline-block;
   margin-left: 8px;
@@ -1898,7 +1901,7 @@ a { color: var(--green-700); }
       <a class="brand" href="#top">
         <span class="brand-logo" data-bind="site.logoText"></span>
         <span class="brand-text">
-          <strong data-bind="site.title"></strong>
+          <strong><span data-bind="site.title"></span><span class="version-tag brand-version" data-bind="site.version" title="사이트 버전"></span></strong>
           <small><span data-bind="site.university"></span> <span data-bind="site.department"></span></small>
         </span>
       </a>
@@ -1956,7 +1959,7 @@ window.SITE_CONFIG = {
     semester: "2026학년도 1학기",
     // 사이트 버전 — 제목 오른쪽에 빨간 글씨로 표시됩니다.
     // 관리자 화면에서 저장할 때마다 마지막 자리가 1씩 자동으로 올라갑니다 (v1.0.0 → v1.0.1).
-    version: "v1.0.9",
+    version: "v1.1.0",
     logoText: "漢",
   },
 
@@ -2003,6 +2006,14 @@ window.SITE_CONFIG = {
     { value: "auto:tools", unit: "개", label: "실습 AI 도구" },
     { value: "[00]", unit: "권", label: "교수자 저술" },
     { value: "[00]", unit: "년+", label: "강의 경력" },
+  ],
+
+  /* 사이트에 담긴 공지 — 관리자 화면 › 설정 파일 › 「index.html 내려받기」를 하면 그때의 공지로 바뀝니다 */
+  noticeList: [
+    {"id": "nmvx7q5r2", "title": "강의 개설", "body": "환영합니다.", "pinned": false, "at": "2026-11-01T02:30:24.158Z"},
+    {"id": "nmvx7qzkm", "title": "개설2", "body": "환영합니다", "pinned": false, "at": "2026-11-01T02:31:02.806Z"},
+    {"id": "nmvx7r5ty", "title": "개설3", "body": "환영", "pinned": false, "at": "2026-11-01T02:31:10.918Z"},
+    {"id": "nmvx7rcmf", "title": "개설4", "body": "ㅇㅇ", "pinned": false, "at": "2026-11-01T02:31:19.719Z"},
   ],
 
   /* 공지사항 — 공지 글은 관리자 화면에서 올립니다 */
@@ -2501,7 +2512,13 @@ window.SiteStore = (function () {
     saveRoster: function (list) { return save("roster", list); },
 
     /* 공지: [{ id, title, body, pinned, at }] */
-    getNotices: function () { return read(DATA + "notices", []); },
+    /* 이 브라우저에서 관리자가 공지를 고친 적이 있으면 그 공지를, 없으면 사이트 파일에 담긴 공지(noticeList)를 씁니다 */
+    getNotices: function () {
+      var local = read(DATA + "notices", null);
+      if (Array.isArray(local)) return local;
+      var pub = (window.SITE_CONFIG && window.SITE_CONFIG.noticeList) || [];
+      return JSON.parse(JSON.stringify(pub));
+    },
     saveNotices: function (list) { return save("notices", list); },
 
     /* 관리자가 고친 사이트 설정 */
@@ -2643,7 +2660,6 @@ window.SiteStore = (function () {
     '<h1 id="hero-title">' +
     (h.titleEmoji ? '<span class="title-emoji" aria-hidden="true">' + esc(h.titleEmoji) + "</span>" : "") +
     esc(h.title) +
-    (C.site.version ? ' <span class="version-tag" title="사이트 버전">' + esc(C.site.version) + "</span>" : "") +
     "</h1>" +
     '<p class="hero-subtitle">' + esc(h.subtitle) + "</p>" +
     '<p class="hero-desc">' + esc(h.description) + "</p>" +
@@ -4812,11 +4828,16 @@ window.SiteStore = (function () {
   }
   /* 지금 설정을 넣은 index.html을 새로 만들어 내려받기
      (index.html 안의 CONFIG-START ~ CONFIG-END 사이만 바꿉니다) */
+  /* 관리자 화면의 공지를 설정에 담아 모든 방문자가 보게 함 */
+  function withNotices(cfg) {
+    cfg.noticeList = S.getNotices();
+    return cfg;
+  }
   function exportIndexHTML() {
     var block =
       "/* CONFIG-START */\n" +
       "/* 관리자 화면에서 " + fmtTime(new Date().toISOString()) + "에 내보낸 설정 */\n" +
-      "window.SITE_CONFIG = " + JSON.stringify(prune(clone(draft)), null, 2) + ";\n" +
+      "window.SITE_CONFIG = " + JSON.stringify(withNotices(prune(clone(draft))), null, 2) + ";\n" +
       "/* CONFIG-END */";
     fetch(location.pathname, { cache: "no-store" })
       .then(function (r) {
