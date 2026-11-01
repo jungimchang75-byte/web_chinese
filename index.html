@@ -1936,7 +1936,7 @@ window.SITE_CONFIG = {
     semester: "2026학년도 1학기",
     // 사이트 버전 — 제목 오른쪽에 빨간 글씨로 표시됩니다.
     // 관리자 화면에서 저장할 때마다 마지막 자리가 1씩 자동으로 올라갑니다 (v1.0.0 → v1.0.1).
-    version: "v1.0.5",
+    version: "v1.0.6",
     logoText: "漢",
   },
 
@@ -3336,8 +3336,20 @@ window.SiteStore = (function () {
     );
     var form = document.querySelector(".apply-form");
     form.addEventListener("submit", onApplySubmit);
-    form.addEventListener("input", function (e) { clearFieldError(e.target.name); });
+    form.addEventListener("input", function (e) {
+      if (e.target.type === "tel") e.target.value = formatPhone(e.target.value);
+      clearFieldError(e.target.name);
+    });
     form.addEventListener("change", function (e) { clearFieldError(e.target.name); });
+  }
+
+  /* 휴대폰 번호에 하이픈 자동 입력: 01012345678 → 010-1234-5678 */
+  function formatPhone(v) {
+    var d = String(v).replace(/\D/g, "").slice(0, 11);
+    if (d.length < 4) return d;
+    if (d.length < 8) return d.slice(0, 3) + "-" + d.slice(3);
+    if (d.length === 10) return d.slice(0, 3) + "-" + d.slice(3, 6) + "-" + d.slice(6);
+    return d.slice(0, 3) + "-" + d.slice(3, 7) + "-" + d.slice(7);
   }
 
   function fieldValue(form, f) {
@@ -3346,6 +3358,7 @@ window.SiteStore = (function () {
       var picked = form.querySelector('input[name="' + f.name + '"]:checked');
       return picked ? picked.value : "";
     }
+    if (f.type === "tel") form.elements[f.name].value = formatPhone(form.elements[f.name].value);
     return form.elements[f.name].value.trim();
   }
 
