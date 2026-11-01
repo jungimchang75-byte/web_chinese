@@ -1959,7 +1959,7 @@ window.SITE_CONFIG = {
     semester: "2026학년도 1학기",
     // 사이트 버전 — 제목 오른쪽에 빨간 글씨로 표시됩니다.
     // 관리자 화면에서 저장할 때마다 마지막 자리가 1씩 자동으로 올라갑니다 (v1.0.0 → v1.0.1).
-    version: "v1.1.2",
+    version: "v1.1.3",
     logoText: "漢",
   },
 
@@ -2158,8 +2158,13 @@ window.SITE_CONFIG = {
         assignment: { title: "1분 발표 원고", desc: "기말 발표용 1분 분량 원고(한자+병음)와 연습 녹음 파일을 제출합니다." },
       },
       {
-        week: 15, title: "기말고사 · 회화 발표", expression: "", note: "9~14주차 범위 · 1분 발표", type: "exam",
-        content: ["필기시험 (50분)", "조별 여행 계획 발표 (1인 1분)"],
+        week: 15, title: "회화 발표 · 종합 복습", expression: "我打算去上海旅行。", note: "조별 발표 · 9~14주차 복습",
+        content: ["조별 여행 계획 발표 (1인 1분)", "발표 상호 피드백", "기말고사 범위 정리와 예상 문제 풀이"],
+        videos: [{ title: "중국어 발표 표현", url: "https://www.youtube.com/results?search_query=중국어+발표+표현" }],
+      },
+      {
+        week: 16, title: "기말고사", expression: "", note: "9~15주차 범위 · 필기와 말하기", type: "exam",
+        content: ["필기시험 (50분)", "1:1 말하기 시험 (개인별 3분)"],
       },
     ],
   },
