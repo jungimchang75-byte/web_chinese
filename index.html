@@ -1813,6 +1813,12 @@ a { color: var(--green-700); }
 .site-footer h2 { color: #fff; }
 .site-footer h2 small, .profile-bio, .footer-bottom { color: #c4d6cc; }
 .footer-bottom p { margin: 0; line-height: 1.8; }
+.site-footer .name-alt { font-family: "Noto Sans KR", "Noto Sans SC", sans-serif; font-size: 15px; font-weight: 500; color: #c4d6cc; }
+.profile-aff-en { display: block; font-size: 13px; font-weight: 400; color: #c4d6cc; font-style: italic; }
+.profile-roles { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.profile-roles li { padding: 3px 12px; border-radius: 999px; font-size: 13px; color: #e6efe9; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.18); }
+.site-footer img.avatar { display: block; object-fit: cover; border: 3px solid rgba(255, 255, 255, 0.85); }
+@media (max-width: 600px) { .profile-roles { justify-content: center; } }
 .footer-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 4px; }
 .footer-links a { color: #fff; font-weight: 700; text-decoration: none; border-bottom: 1px solid rgba(255, 255, 255, 0.4); }
 .footer-links a:hover { border-bottom-color: #fff; }
@@ -1930,7 +1936,7 @@ window.SITE_CONFIG = {
     semester: "2026학년도 1학기",
     // 사이트 버전 — 제목 오른쪽에 빨간 글씨로 표시됩니다.
     // 관리자 화면에서 저장할 때마다 마지막 자리가 1씩 자동으로 올라갑니다 (v1.0.0 → v1.0.1).
-    version: "v1.0.3",
+    version: "v1.0.4",
     logoText: "中",
   },
 
@@ -2289,15 +2295,17 @@ window.SITE_CONFIG = {
   /* 교수자 (페이지 맨 아래 푸터에 표시) */
   instructor: {
     title: "교수자",
-    name: "[교수명]",
-    position: "[직위]",
-    affiliation: "고려대학교 중어중문학과",
-    photo: "", // 사진 파일 경로 (예: "images/professor.jpg"). 비워 두면 이니셜이 표시됩니다.
-    bio: "[전공 분야와 연구·교육 경력을 2~3문장으로 소개해 주세요.]",
+    name: "장정임",
+    nameAlt: "", // 이름 옆에 함께 보이는 한자·영문 이름 (선택)
+    position: "연구교수",
+    affiliation: "고려대학교 중국학연구소 / 중어중문학과",
+    affiliationEn: "", // 영문 소속 (선택)
+    photo: "", // 사진 파일 경로 또는 이미지 주소. 비워 두면 이름 첫 글자가 표시됩니다.
+    roles: [], // 직함 배지 (선택)
+    bio: "",
+    /* links를 쓰면 한 칸에 여러 링크를 나란히 보여 줍니다 */
     contacts: [
-      { label: "이메일", value: "[email@korea.ac.kr]", href: "mailto:email@korea.ac.kr" },
-      { label: "연구실", value: "[건물명 호실]" },
-      { label: "면담 시간", value: "[화 14:00–16:00, 사전 예약]" },
+      { label: "이메일", value: "jichang@korea.ac.kr", href: "mailto:jichang@korea.ac.kr" },
     ],
   },
 
@@ -2955,13 +2963,24 @@ window.SiteStore = (function () {
     '<div class="footer-profile">' + avatar +
     '<div class="profile-body">' +
     '<p class="footer-eyebrow">' + esc(p.title) + "</p>" +
-    "<h2>" + esc(p.name) + " <small>" + esc(p.position) + "</small></h2>" +
-    '<p class="profile-aff">' + esc(p.affiliation) + "</p>" +
-    '<p class="profile-bio">' + esc(p.bio) + "</p>" +
+    "<h2>" + esc(p.name) +
+    (p.nameAlt ? ' <span class="name-alt">' + esc(p.nameAlt) + "</span>" : "") +
+    " <small>" + esc(p.position) + "</small></h2>" +
+    '<p class="profile-aff">' + esc(p.affiliation) +
+    (p.affiliationEn ? '<span class="profile-aff-en">' + esc(p.affiliationEn) + "</span>" : "") +
+    "</p>" +
+    (p.roles && p.roles.length ? '<ul class="profile-roles">' + list(p.roles, function (r) { return "<li>" + esc(r) + "</li>"; }) + "</ul>" : "") +
+    (p.bio ? '<p class="profile-bio">' + esc(p.bio) + "</p>" : "") +
     "</div>" +
     '<dl class="footer-contacts">' +
     list(p.contacts, function (c) {
-      var v = c.href ? '<a href="' + esc(c.href) + '">' + esc(c.value) + "</a>" : esc(c.value);
+      var v = c.links
+        ? c.links
+            .map(function (l) { return '<a href="' + esc(l.url) + '" target="_blank" rel="noopener">' + esc(l.text || l.url) + "</a>"; })
+            .join(" / ")
+        : c.href
+          ? '<a href="' + esc(c.href) + '">' + esc(c.value) + "</a>"
+          : esc(c.value);
       return "<div><dt>" + esc(c.label) + "</dt><dd>" + v + "</dd></div>";
     }) +
     "</dl></div>" +
@@ -4042,6 +4061,7 @@ window.SiteStore = (function () {
     enabled: "사용", delay: "표시 지연 (밀리초)", points: "안내 항목", cta: "버튼", welcome: "첫 방문 환영", message: "환영 문구",
     instructor: "교수자", position: "직위", affiliation: "소속", photo: "사진 파일 경로", bio: "소개", contacts: "연락처",
     footer: "푸터", nav: "상단 메뉴", copyright: "저작권 문구", links: "링크", url: "주소",
+    nameAlt: "한자·영문 이름", affiliationEn: "영문 소속", roles: "직함 (여러 개)",
     quiz: "실시간 퀴즈", hostText: "교수자 안내 문구", defaultTime: "기본 제한 시간 (초)", sample: "처음 열 때 예시 퀴즈",
     questions: "문제", choices: "보기", answer: "정답 번호 (0부터)", explanation: "해설",
   };
