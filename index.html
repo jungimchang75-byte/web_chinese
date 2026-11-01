@@ -1353,6 +1353,8 @@ button.btn-ghost { border: 1px solid var(--line); }
 .file-pick input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
 .file-pick:focus-within .btn { outline: 3px solid var(--ochre-300); outline-offset: 2px; }
 .file-name { flex: 1; min-width: 120px; font-size: 13px; color: var(--text-soft); overflow-wrap: anywhere; }
+.sub-url { flex: 1; min-width: 200px; min-height: 38px; padding: 0 12px; border: 1px solid var(--line, #e2dacb); border-radius: 10px; font: inherit; font-size: 14px; background: var(--surface, #fff); }
+.sub-status a { font-weight: 700; overflow-wrap: anywhere; }
 
 /* 안내 팝업 */
 .modal-backdrop {
@@ -1949,6 +1951,43 @@ a { color: var(--green-700); }
 .wa-lead { margin: 0 0 6px; color: var(--text-soft); }
 .wa-notes ul, .wa-notes ol, .wa-assign ol { margin: 0; padding-left: 20px; }
 .wa-notes li, .wa-assign li { margin: 3px 0; }
+/* 강의 노트 시각화 */
+.wa-notes { display: grid; gap: 14px; }
+.wn-hero { padding: 18px 20px; border-radius: 16px; color: #fff; background: linear-gradient(135deg, #1f5547, #2f7a63 60%, #c2703d); box-shadow: var(--raise, var(--shadow)); }
+.wn-hero p { margin: 0; }
+.wn-kicker { font-size: 13px; font-weight: 700; opacity: 0.85; letter-spacing: 1px; }
+.wa-body .wn-hero h5 { margin: 4px 0 6px; font-family: "Noto Serif KR", serif; font-size: clamp(19px, 2.6vw, 24px); color: #fff; }
+.wn-sum { line-height: 1.6; opacity: 0.95; }
+.wn-stats { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px !important; }
+.wn-stats span { padding: 3px 10px; border-radius: 999px; font-size: 13px; background: rgba(255, 255, 255, 0.18); }
+.wn-flow ol { list-style: none; margin: 0; padding: 0 !important; display: flex; flex-wrap: wrap; gap: 6px; counter-reset: none; }
+.wn-flow li { margin: 0 !important; display: flex; align-items: center; }
+.wn-flow li + li::before { content: "→"; margin-right: 6px; color: var(--text-soft, #888); }
+.wn-flow a { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px 5px 6px; border-radius: 999px; font-size: 14px; font-weight: 700; color: var(--green-800, #1d4f45); text-decoration: none; background: var(--surface, #fff); box-shadow: var(--raise, var(--shadow)); }
+.wn-flow a:hover { background: var(--green-100, #e2ece5); }
+.wn-dot { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--cream-100, #efe9df); }
+.wn-secs { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.wn-sec { padding: 14px 16px; border-radius: 14px; background: var(--surface, #fff); border-top: 5px solid #2f7a63; box-shadow: var(--raise, var(--shadow)); scroll-margin-top: 90px; }
+.wn-sec.c1 { border-top-color: #c2703d; }
+.wn-sec.c2 { border-top-color: #3b82c4; }
+.wn-sec.c3 { border-top-color: #b0452c; }
+.wa-body .wn-sec h6 { margin: 0 0 8px; display: flex; align-items: center; gap: 6px; font-size: 15px; color: var(--green-800, #1d4f45); }
+.wn-num { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; font-size: 13px; color: #fff; background: var(--green-700, #1f5547); }
+.wn-sec ul { padding-left: 0 !important; list-style: none; }
+.wn-sec li { position: relative; padding-left: 16px; line-height: 1.6; }
+.wn-sec li::before { content: ""; position: absolute; left: 2px; top: 0.65em; width: 6px; height: 6px; border-radius: 50%; background: #c2703d; }
+.wa-body .wn-h { margin: 4px 0 0; font-size: 16px; }
+.wn-h small { font-weight: 400; color: var(--text-soft); }
+.wn-expr { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+.wa-say.wn-card { position: relative; width: auto; height: auto; display: grid; gap: 2px; justify-items: start; padding: 12px 32px 12px 14px; border-radius: 14px; text-align: left; font: inherit; background: var(--surface, #fff); box-shadow: var(--raise, var(--shadow)); transition: transform 0.15s; }
+.wa-say.wn-card:hover { transform: translateY(-2px); background: var(--green-100, #e2ece5); }
+.wn-zh { font-size: 20px; font-weight: 800; color: var(--green-800, #1d4f45); }
+.wn-py { font-size: 13px; color: #c2703d; }
+.wn-ko { font-size: 14px; color: var(--text-soft, #666); }
+.wn-sp { position: absolute; right: 10px; top: 10px; font-size: 14px; opacity: 0.6; }
+.wn-qs { list-style: none; padding: 0 !important; display: grid; gap: 8px; }
+.wn-qs li { display: flex; align-items: flex-start; gap: 10px; margin: 0 !important; padding: 10px 14px; border-radius: 12px; background: var(--cream-100, #efe9df); line-height: 1.6; }
+.wn-q { flex: none; padding: 1px 8px; border-radius: 8px; font-size: 13px; font-weight: 800; color: #fff; background: #c2703d; }
 .wa-expr { list-style: none; padding: 0 !important; display: grid; gap: 6px; }
 .wa-expr li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .wa-expr span[lang] { font-size: 17px; font-weight: 700; }
@@ -1973,7 +2012,12 @@ a { color: var(--green-700); }
 .wa-py { font-size: 14px; color: var(--green-700, #1f5547); }
 .wa-ko { font-size: 14px; color: var(--text-soft); }
 .wa-ko small { opacity: 0.8; }
-.hide-py .wa-py, .hide-ko .wa-ko { display: none; }
+.hide-py .wa-py, .hide-ko .wa-ko, .hide-gram .wa-gram { display: none; }
+.wa-gram { margin-top: 6px; padding: 8px 12px; border-left: 4px solid #c2703d; border-radius: 0 10px 10px 0; background: #fbf4ea; font-size: 14px; line-height: 1.6; }
+.wa-gram p { margin: 0; }
+.wa-gram-pat { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 3px !important; }
+.wa-gram-pat span { padding: 0 8px; border-radius: 999px; font-size: 12px; font-weight: 700; color: #fff; background: #c2703d; }
+.wa-gram-pat b { color: var(--green-800, #1d4f45); }
 
 /* 이미지 · 유튜브 */
 .wa-img { margin: 0; border-radius: 14px; overflow: hidden; aspect-ratio: 16 / 9; background: var(--cream-200, #e7e0d3); box-shadow: var(--raise, var(--shadow)); }
@@ -1996,6 +2040,27 @@ a { color: var(--green-700); }
 .wa-tok { min-height: 34px; padding: 0 12px; border: 0; border-radius: 10px; font: inherit; font-size: 17px; font-weight: 700; color: #fff; background: var(--green-500, #3b7a68); cursor: pointer; }
 .wa-order-ans .wa-tok { background: var(--green-800, #1d4f45); }
 .wa-score { font-weight: 800; color: var(--green-700, #1f5547); align-self: center; }
+.wa-mark { color: var(--green-800, #1d4f45); }
+.wa-q.is-wrong .wa-mark { color: #b0452c; }
+/* 온라인 퀴즈 결과 피드백 */
+.wa-result { margin-top: 14px; padding: 16px 18px; border-radius: 14px; background: var(--surface, #fff); border: 2px solid #d9cfb8; display: grid; gap: 10px; }
+.wa-result.is-perfect { border-color: #e0b13f; background: linear-gradient(135deg, #fff8e1, #fdeee6); }
+.wa-result p { margin: 0; }
+.wa-res-head { display: flex; align-items: center; gap: 12px; }
+.wa-res-emo { font-size: 36px; line-height: 1; }
+.wa-result.is-perfect .wa-res-emo { animation: resPop 0.8s ease-out; }
+.wa-res-title { font-size: 19px; font-weight: 800; color: var(--green-800, #1d4f45); }
+.wa-res-sub { font-size: 14px; color: var(--text-soft, #666); }
+.wa-res-bar { height: 10px; border-radius: 999px; background: #ece5d6; overflow: hidden; }
+.wa-res-bar span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #6c8f4e, #3fa36b); transition: width 0.8s ease; }
+.wa-result.is-perfect .wa-res-bar span { background: linear-gradient(90deg, #f4b63f, #e0463c); }
+.wa-res-types { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.wa-res-types li { display: flex; gap: 8px; padding: 4px 12px; border-radius: 999px; background: #fbefea; font-size: 14px; }
+.wa-res-types li.is-full { background: #eef3e6; }
+.wa-res-wrong a { display: inline-block; margin: 2px 4px 0 0; padding: 1px 9px; border-radius: 999px; background: #fbefea; color: #b0452c; font-weight: 700; text-decoration: none; }
+.wa-res-tip { font-size: 14px; padding: 8px 12px; border-radius: 10px; background: #f3f0e6; }
+.fw-canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 9999; }
+@keyframes resPop { 0% { transform: scale(0.3) rotate(-20deg); } 60% { transform: scale(1.3) rotate(8deg); } 100% { transform: scale(1); } }
 
 /* 실시간 퀴즈 미리보기 */
 .wa-lq ol { margin: 0 0 10px; padding-left: 20px; display: grid; gap: 8px; }
@@ -2005,14 +2070,22 @@ a { color: var(--green-700); }
 
 /* 문화 슬라이드 (모션 그래픽) */
 .cs { position: relative; border-radius: 18px; overflow: hidden; box-shadow: var(--raise, var(--shadow)); outline: none; }
-.cs-stage { position: relative; aspect-ratio: 16 / 9; }
-.cs-slide { position: absolute; inset: 0; display: flex; align-items: center; gap: 4%; padding: 5% 7%; color: #fff; opacity: 0; visibility: hidden; transition: opacity 0.6s, visibility 0.6s; overflow: hidden; }
+/* 모든 장을 한 칸에 겹쳐 두어, 글이 가장 긴 장에 맞춰 높이가 정해짐 */
+.cs-stage { position: relative; display: grid; min-height: 340px; }
+.cs-slide { grid-area: 1 / 1; position: relative; display: flex; padding-bottom: 64px !important; align-items: center; gap: 4%; padding: 5% 7%; color: #fff; opacity: 0; visibility: hidden; transition: opacity 0.6s, visibility 0.6s; overflow: hidden; }
 .cs-slide.on { opacity: 1; visibility: visible; }
 .cs-emoji { flex: none; font-size: clamp(56px, 11vw, 120px); line-height: 1; filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.25)); }
 .cs-text { min-width: 0; }
 .cs-no { margin: 0 0 4px; font-size: 13px; opacity: 0.75; letter-spacing: 1px; }
 .cs-text h5 { margin: 0 0 8px; font-family: "Noto Serif KR", serif; font-size: clamp(18px, 3vw, 30px); color: #fff; }
 .cs-text p { margin: 0; font-size: clamp(13px, 1.7vw, 17px); line-height: 1.6; }
+.cs-points { margin: 10px 0 0; padding: 10px 14px; list-style: none; border-radius: 12px; background: rgba(0, 0, 0, 0.16); display: grid; gap: 4px; font-size: clamp(12px, 1.5vw, 15px); line-height: 1.5; text-align: left; }
+.cs-points li { position: relative; padding-left: 18px; }
+.cs-points li::before { content: "✦"; position: absolute; left: 0; color: #ffe08a; }
+.cs-slide.on .cs-points { animation: csUp 0.8s 0.55s both; }
+.cs-phrase { display: flex; align-items: center; gap: 6px; margin-top: 10px !important; padding: 8px 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.92); color: #2b2b2b; font-size: clamp(12px, 1.5vw, 15px) !important; text-align: left; }
+.cs-phrase .wa-say { flex: none; }
+.cs-slide.on .cs-phrase { animation: csUp 0.8s 0.95s both; }
 .cs-key { display: inline-block; margin-top: 10px !important; padding: 4px 12px; border-radius: 999px; background: rgba(255, 255, 255, 0.2); font-weight: 700; }
 .cs-deco { position: absolute; border-radius: 50%; background: rgba(255, 255, 255, 0.12); pointer-events: none; }
 .cs-deco.d1 { width: 46%; aspect-ratio: 1; right: -10%; top: -20%; }
@@ -2164,7 +2237,7 @@ window.SITE_CONFIG = {
     semester: "2026학년도 1학기",
     // 사이트 버전 — 제목 오른쪽에 빨간 글씨로 표시됩니다.
     // 관리자 화면에서 저장할 때마다 마지막 자리가 1씩 자동으로 올라갑니다 (v1.0.0 → v1.0.1).
-    version: "v1.3.2",
+    version: "v1.3.3",
     logoText: "漢",
   },
 
@@ -2282,7 +2355,7 @@ window.SITE_CONFIG = {
     startDate: "2026-03-03",
     defaultTime: "[10:30–12:15]",
     defaultPlace: "[서관 000호]",
-    submitUrl: "", // 과제 제출 주소 (구글 폼, LMS 등). 비워 두면 버튼이 '준비 중'으로 표시됩니다.
+    submitUrl: "", // (사용 안 함) 과제는 모두 「내 강의실」에서 구글 드라이브 공유 링크로 제출합니다.
     holidays: [
       { date: "2026-05-05", name: "어린이날 (휴강)" },
     ],
@@ -2296,7 +2369,7 @@ window.SITE_CONFIG = {
         week: 2, title: "시간과 하루 일과", expression: "现在几点？", note: "시각 표현, 시간사의 위치",
         content: ["点·分·半·刻으로 시각 말하기", "시간사가 문장에서 놓이는 자리", "AI 회화 파트너와 하루 일과 묻고 답하기"],
         videos: [{ title: "중국어 시간 표현", url: "https://www.youtube.com/results?search_query=중국어+시간+표현+几点" }],
-        assignment: { title: "하루 일과 녹음", desc: "자신의 하루 일과를 시간 표현 5개 이상 넣어 1분 이내로 녹음해 제출합니다." },
+        assignment: { title: "하루 일과 녹음", desc: "자신의 하루 일과를 시간 표현 5개 이상 넣어 1분 이내로 녹음하고, 녹음 파일을 구글 드라이브에 올려 공유 링크를 제출합니다." },
       },
       {
         week: 3, title: "날짜와 생일", expression: "你的生日是几月几号？", note: "年·月·日·星期",
@@ -2318,7 +2391,7 @@ window.SITE_CONFIG = {
         week: 6, title: "쇼핑과 가격", expression: "这个多少钱？", note: "화폐 단위, 양사",
         content: ["块·毛·分과 가격 읽기", "자주 쓰는 양사", "가게 역할극과 가격 흥정"],
         videos: [{ title: "중국어 쇼핑 회화", url: "https://www.youtube.com/results?search_query=중국어+쇼핑+회화+多少钱" }],
-        assignment: { title: "쇼핑 역할극 대본", desc: "짝과 함께 8줄 이상의 쇼핑 대화문을 쓰고, AI 첨삭 전후 비교표를 함께 제출합니다." },
+        assignment: { title: "쇼핑 역할극 대본", desc: "짝과 함께 8줄 이상의 쇼핑 대화문을 쓰고, AI 첨삭 전후 비교표와 함께 구글 문서로 만들어 공유 링크를 제출합니다." },
       },
       {
         week: 7, title: "음식 주문하기", expression: "我要一碗牛肉面。", note: "要/想, 식당 표현",
@@ -2338,7 +2411,7 @@ window.SITE_CONFIG = {
         week: 10, title: "취미와 능력", expression: "你会游泳吗？", note: "会·能·可以 구분",
         content: ["会·能·可以의 차이", "취미 묻고 답하기", "반 친구 취미 조사 결과를 표로 정리하기"],
         videos: [{ title: "会 能 可以 차이", url: "https://www.youtube.com/results?search_query=会+能+可以+차이" }],
-        assignment: { title: "취미 설문 데이터 분석", desc: "반 친구 5명 이상에게 중국어로 취미를 묻고, 결과를 표와 그래프 1개로 정리해 제출합니다." },
+        assignment: { title: "취미 설문 데이터 분석", desc: "반 친구 5명 이상에게 중국어로 취미를 묻고, 결과를 구글 시트에 표와 그래프 1개로 정리해 공유 링크를 제출합니다." },
       },
       {
         week: 11, title: "경험 말하기", expression: "你去过中国吗？", note: "동태조사 过",
@@ -2349,7 +2422,7 @@ window.SITE_CONFIG = {
         week: 12, title: "동작의 완료", expression: "我已经吃了。", note: "동태조사 了, 没(有)",
         content: ["동태조사 了와 어기조사 了", "已经…了 구문", "어제 한 일 말하기"],
         videos: [{ title: "중국어 了 용법", url: "https://www.youtube.com/results?search_query=중국어+了+용법" }],
-        assignment: { title: "AI 번역 비교 리포트", desc: "같은 문장 5개를 Papago와 ChatGPT로 번역해 차이를 비교하고, 더 자연스러운 번역과 이유를 적어 제출합니다." },
+        assignment: { title: "AI 번역 비교 리포트", desc: "같은 문장 5개를 Papago와 ChatGPT로 번역해 차이를 비교하고, 더 자연스러운 번역과 이유를 구글 문서에 적어 공유 링크를 제출합니다." },
       },
       {
         week: 13, title: "비교 표현", expression: "今天比昨天冷。", note: "比 비교문, 没有 비교",
@@ -2360,7 +2433,7 @@ window.SITE_CONFIG = {
         week: 14, title: "여행 계획 · 발표 준비", expression: "我打算去上海旅行。", note: "打算, 조별 발표 준비",
         content: ["打算으로 계획 말하기", "조별 여행 계획 짜기", "발표 리허설과 피드백"],
         videos: [{ title: "중국어 여행 회화", url: "https://www.youtube.com/results?search_query=중국어+여행+회화" }],
-        assignment: { title: "1분 발표 원고", desc: "기말 발표용 1분 분량 원고(한자+병음)와 연습 녹음 파일을 제출합니다." },
+        assignment: { title: "1분 발표 원고", desc: "기말 발표용 1분 분량 원고(한자+병음)와 연습 녹음을 구글 드라이브 폴더 하나에 담아 폴더 공유 링크를 제출합니다." },
       },
       {
         week: 15, title: "회화 발표 · 종합 복습", expression: "我打算去上海旅行。", note: "조별 발표 · 9~14주차 복습",
@@ -2423,12 +2496,12 @@ window.SITE_CONFIG = {
   /* 내 강의실 — 로그인, 출석 체크, 과제 제출 */
   classroom: {
     title: "내 강의실",
-    lead: "회원가입한 아이디와 비밀번호로 로그인해 출석을 체크하고 과제 파일을 제출하세요.",
+    lead: "회원가입한 아이디와 비밀번호로 로그인해 출석을 체크하고, 과제는 구글 드라이브 공유 링크로 제출하세요.",
     // true: 시연용으로 지난 수업도 출석 체크할 수 있습니다. 실제 운영 때는 false로 바꾸면 수업 당일에만 체크됩니다.
     testMode: true,
     allowLate: true, // 마감 후 제출 허용 (지각으로 표시)
-    maxFileMB: 20,
-    accept: ".pdf,.hwp,.hwpx,.doc,.docx,.ppt,.pptx,.xlsx,.mp3,.m4a,.wav,.jpg,.png,.zip",
+    // 과제는 파일 대신 구글 드라이브(문서·시트·슬라이드 포함) 공유 링크로 받습니다.
+    driveHelp: "과제 파일을 구글 드라이브에 올리고 「공유 → 링크가 있는 모든 사용자(뷰어)」로 바꾼 뒤 링크를 복사해 붙여 넣으세요.",
     loginNote: "아직 계정이 없다면 위쪽 「회원가입」에서 먼저 가입하세요. 비밀번호는 해시값으로만 이 브라우저에 저장됩니다.",
   },
 
@@ -2694,19 +2767,17 @@ window.SiteStore = (function () {
       return save("attendance", all);
     },
 
-    /* 과제 제출: { 학번: { 주차: { fileName, size, type, at, late, count } } }
-       시연용이라 파일 내용은 저장하지 않고 파일 정보만 기록합니다. */
+    /* 과제 제출: { 학번: { 주차: { url, at, late, count } } } — 구글 드라이브 공유 링크만 기록합니다.
+       (예전 파일 제출 기록은 fileName, size가 남아 있을 수 있습니다) */
     getSubmissions: function (studentId) {
       return read(DATA + "submissions", {})[studentId] || {};
     },
-    submit: function (studentId, week, file, late) {
+    submit: function (studentId, week, url, late) {
       var all = read(DATA + "submissions", {});
       all[studentId] = all[studentId] || {};
       var prev = all[studentId][week];
       all[studentId][week] = {
-        fileName: file.name,
-        size: file.size,
-        type: file.type,
+        url: url,
         at: now(),
         late: !!late,
         count: prev ? prev.count + 1 : 1,
@@ -2942,7 +3013,6 @@ window.SiteStore = (function () {
 
   /* 커리큘럼 — 주차별 펼침 목록 */
   function assignmentHTML(a) {
-    var url = a.submitUrl || cur.submitUrl;
     return (
       '<div class="assignment">' +
       '<div class="assignment-head"><span class="tag tag-req">과제</span><strong>' + esc(a.title) + "</strong></div>" +
@@ -2950,9 +3020,7 @@ window.SiteStore = (function () {
       '<div class="assignment-foot">' +
       '<div class="due"><span class="due-label">마감</span> <strong>' + esc(fmtDateTime(a._due)) + "</strong>" +
       '<span class="countdown" data-due="' + a._due.getTime() + '"></span></div>' +
-      (url
-        ? '<a class="btn btn-primary btn-sm submit-btn" href="' + esc(url) + '" target="_blank" rel="noopener" data-due="' + a._due.getTime() + '">제출하기</a>'
-        : '<a class="btn btn-primary btn-sm" href="#classroom">내 강의실에서 제출</a>') +
+      '<a class="btn btn-primary btn-sm" href="#classroom">📎 드라이브 링크로 제출</a>' +
       "</div></div>"
     );
   }
@@ -3880,6 +3948,14 @@ window.SiteStore = (function () {
     );
   }
 
+  /* 구글 드라이브 공유 링크만 받기 (drive.google.com, docs.google.com) */
+  function isDriveUrl(v) {
+    return /^https:\/\/(drive|docs)\.google\.com\/\S+$/i.test(v);
+  }
+  function subLink(s) {
+    if (s.url) return '<a href="' + esc(s.url) + '" target="_blank" rel="noopener">구글 드라이브 링크</a>';
+    return "<strong>" + esc(s.fileName || "") + "</strong>";
+  }
   function submissionHTML(u) {
     var subs = S.getSubmissions(u.id);
     var now = Date.now();
@@ -3900,16 +3976,14 @@ window.SiteStore = (function () {
           '<span class="countdown" data-due="' + a._due.getTime() + '"></span></div>' +
           '<p class="sub-due">마감 ' + esc(U.fmtDateTime(a._due)) + "</p>" +
           (s
-            ? '<p class="sub-status">✓ <strong>' + esc(s.fileName) + "</strong> (" + fmtSize(s.size) + ") · " + esc(fmtTime(s.at)) +
+            ? '<p class="sub-status">✓ ' + subLink(s) + " · " + esc(fmtTime(s.at)) +
               (s.late ? ' <span class="chip chip-miss">지각</span>' : "") +
               (s.count > 1 ? ' <span class="chip chip-wait">' + s.count + "번째 제출</span>" : "") + "</p>"
             : "") +
           (locked
             ? '<p class="sub-locked">마감되어 제출할 수 없습니다.</p>'
             : '<form class="sub-form" data-week="' + w.week + '" novalidate>' +
-              '<label class="file-pick"><input type="file" name="file" accept="' + esc(cr.accept) + '" />' +
-              '<span class="btn btn-ghost btn-sm">파일 선택</span></label>' +
-              '<span class="file-name">선택된 파일 없음</span>' +
+              '<input class="sub-url" type="url" name="url" inputmode="url" autocomplete="off" placeholder="https://drive.google.com/…" aria-label="구글 드라이브 공유 링크" value="' + esc((s && s.url) || "") + '" />' +
               '<button class="btn btn-primary btn-sm" type="submit">' + (s ? "다시 제출" : "제출하기") + "</button>" +
               '<p class="form-msg" aria-live="polite"></p>' +
               "</form>") +
@@ -3917,7 +3991,7 @@ window.SiteStore = (function () {
         );
       }) +
       "</ul>" +
-      '<p class="small-note">시연용이라 파일 이름과 크기만 이 브라우저에 기록됩니다. 파일 보관은 서버를 연결한 뒤 가능합니다.</p>' +
+      '<p class="small-note">📎 ' + esc(cr.driveHelp || "") + " 링크는 이 브라우저에 기록됩니다.</p>" +
       "</div>"
     );
   }
@@ -3947,26 +4021,17 @@ window.SiteStore = (function () {
     }
     if (e.target.closest(".logout")) S.logout();
   });
-  classroomEl.addEventListener("change", function (e) {
-    if (e.target.type !== "file") return;
-    var form = e.target.closest(".sub-form");
-    var f = e.target.files[0];
-    form.querySelector(".file-name").textContent = f ? f.name + " (" + fmtSize(f.size) + ")" : "선택된 파일 없음";
-    setMsg(form.querySelector(".form-msg"), "", "");
-  });
   classroomEl.addEventListener("submit", function (e) {
     var form = e.target.closest(".sub-form");
     if (!form) return;
     e.preventDefault();
     var u = S.currentUser();
     var msg = form.querySelector(".form-msg");
-    var file = form.elements.file.files[0];
-    if (!file) return setMsg(msg, "제출할 파일을 선택해 주세요.", "error");
-    if (file.size > cr.maxFileMB * 1048576) return setMsg(msg, "파일이 너무 큽니다. " + cr.maxFileMB + "MB 이하로 올려 주세요.", "error");
-    var ext = "." + file.name.split(".").pop().toLowerCase();
-    if (cr.accept.split(",").indexOf(ext) < 0) return setMsg(msg, "올릴 수 없는 파일 형식입니다. (" + cr.accept + ")", "error");
+    var url = form.elements.url.value.trim();
+    if (!url) return setMsg(msg, "구글 드라이브 공유 링크를 붙여 넣어 주세요.", "error");
+    if (!isDriveUrl(url)) return setMsg(msg, "구글 드라이브 공유 링크만 받습니다. (https://drive.google.com/… 또는 https://docs.google.com/…)", "error");
     var w = weeks.filter(function (x) { return String(x.week) === form.getAttribute("data-week"); })[0];
-    S.submit(u.id, w.week, file, Date.now() > w.assignment._due.getTime());
+    S.submit(u.id, w.week, url, Date.now() > w.assignment._due.getTime());
   });
 
   /* 저장된 내용이 바뀌면 (이 탭이든 다른 탭이든) 화면 다시 그리기 */
@@ -4418,7 +4483,7 @@ window.SiteStore = (function () {
     name: "이름", required: "필수", wide: "한 줄 전체", placeholder: "입력 예시", pattern: "형식 검사 (정규식)",
     patternMsg: "형식 오류 안내", autocomplete: "자동완성", inputmode: "입력 키보드", successTitle: "접수 완료 제목",
     successText: "접수 완료 안내", classroom: "내 강의실", testMode: "시연 모드 (지난 수업도 출석 체크)",
-    allowLate: "마감 후 제출 허용", maxFileMB: "최대 파일 크기 (MB)", accept: "허용 파일 형식", loginNote: "로그인 안내",
+    allowLate: "마감 후 제출 허용", driveHelp: "드라이브 링크 제출 안내", loginNote: "로그인 안내",
     tools: "AI 도구", items: "항목", use: "용도", guide: "수강 안내", materials: "준비물", item: "항목", detail: "설명",
     grading: "평가 비율", percent: "비율 (%)", notes: "유의 사항", faq: "FAQ", q: "질문", a: "답변", popup: "안내 팝업",
     enabled: "사용", delay: "표시 지연 (밀리초)", points: "안내 항목", cta: "버튼", welcome: "첫 방문 환영", message: "환영 문구",
@@ -4698,8 +4763,9 @@ window.SiteStore = (function () {
         var r = rec[w.week];
         if (!r) return "";
         count++;
-        if (forCSV) return r.fileName + " (" + fmtTime(r.at) + (r.late ? ", 지각" : "") + ")";
-        return '<span class="ok">✓</span> ' + esc(r.fileName) + (r.late ? ' <span class="chip chip-miss">지각</span>' : "") + '<br /><small>' + esc(fmtTime(r.at)) + "</small>";
+        if (forCSV) return (r.url || r.fileName) + " (" + fmtTime(r.at) + (r.late ? ", 지각" : "") + ")";
+        var what = r.url ? '<a href="' + esc(r.url) + '" target="_blank" rel="noopener">링크 열기</a>' : esc(r.fileName);
+        return '<span class="ok">✓</span> ' + what + (r.late ? ' <span class="chip chip-miss">지각</span>' : "") + '<br /><small>' + esc(fmtTime(r.at)) + "</small>";
       });
       return [forCSV ? s.id : esc(s.id), forCSV ? s.name : esc(s.name)].concat(cells).concat([count + "/" + assignmentWeeks.length]);
     });
@@ -6654,20 +6720,37 @@ window.SiteStore = (function () {
   }
 
   /* ---------- 탭 내용 ---------- */
+  /* 강의 노트: 머리 카드 → 수업 흐름 → 단계별 카드 → 표현 카드 → 확인 질문 */
+  var NOTE_ICON = ["🚪", "💡", "🧩", "🗣️", "🔍", "✅"];
   function notesHTML(n) {
+    var secs = n.sections || [];
+    var ex = n.expressions || [];
+    var qs = n.questions || [];
+    var uid = "wn" + Math.random().toString(36).slice(2, 7);
+    function icon(i) { return i === 0 ? NOTE_ICON[0] : i === secs.length - 1 && secs.length > 2 ? NOTE_ICON[5] : NOTE_ICON[1 + ((i - 1) % 4)]; }
     return (
       '<div class="wa-notes">' +
+      '<header class="wn-hero"><p class="wn-kicker">📘 강의 노트</p>' +
       (n.title ? "<h5>" + esc(n.title) + "</h5>" : "") +
-      (n.summary ? '<p class="wa-lead">' + esc(n.summary) + "</p>" : "") +
-      list(n.sections, function (s) {
-        return '<section><h6>' + esc(s.heading) + "</h6><ul>" + list(s.points, function (p) { return "<li>" + esc(p) + "</li>"; }) + "</ul></section>";
-      }) +
-      ((n.expressions || []).length
-        ? '<h6>핵심 표현</h6><ul class="wa-expr">' + list(n.expressions, function (e) {
-            return '<li><button class="wa-say" type="button" data-say="' + esc(e.zh) + '" aria-label="듣기">🔊</button><span lang="zh-CN">' + esc(e.zh) + '</span><small>' + esc(e.pinyin) + " · " + esc(e.ko) + "</small></li>";
-          }) + "</ul>"
+      (n.summary ? '<p class="wn-sum">' + esc(n.summary) + "</p>" : "") +
+      '<p class="wn-stats"><span>📑 ' + secs.length + "개 단계</span><span>🗣️ 핵심 표현 " + ex.length + "개</span><span>❓ 확인 질문 " + qs.length + "개</span></p></header>" +
+      (secs.length
+        ? '<nav class="wn-flow" aria-label="수업 흐름"><ol>' + list(secs, function (s, i) {
+            return '<li><a href="#' + uid + "-" + i + '"><span class="wn-dot">' + icon(i) + "</span><span>" + esc(s.heading) + "</span></a></li>";
+          }) + "</ol></nav>"
         : "") +
-      ((n.questions || []).length ? '<h6>확인 질문</h6><ol>' + list(n.questions, function (q) { return "<li>" + esc(q) + "</li>"; }) + "</ol>" : "") +
+      '<div class="wn-secs">' + list(secs, function (s, i) {
+        return '<section class="wn-sec c' + (i % 4) + '" id="' + uid + "-" + i + '"><h6><span class="wn-num">' + (i + 1) + "</span>" + icon(i) + " " + esc(s.heading) + "</h6><ul>" +
+          list(s.points, function (p) { return "<li>" + esc(p) + "</li>"; }) + "</ul></section>";
+      }) + "</div>" +
+      (ex.length
+        ? '<h6 class="wn-h">🗣️ 꼭 익힐 표현 <small>카드를 눌러 들어 보세요</small></h6><div class="wn-expr">' + list(ex, function (e) {
+            return '<button class="wa-say wn-card" type="button" data-say="' + esc(e.zh) + '" aria-label="' + esc(e.zh) + ' 듣기"><span class="wn-zh" lang="zh-CN">' + esc(e.zh) + '</span><span class="wn-py">' + esc(e.pinyin) + '</span><span class="wn-ko">' + esc(e.ko) + '</span><span class="wn-sp" aria-hidden="true">🔊</span></button>';
+          }) + "</div>"
+        : "") +
+      (qs.length
+        ? '<h6 class="wn-h">❓ 확인 질문</h6><ol class="wn-qs">' + list(qs, function (q, i) { return '<li><span class="wn-q">Q' + (i + 1) + "</span>" + esc(q) + "</li>"; }) + "</ol>"
+        : "") +
       "</div>"
     );
   }
@@ -6675,7 +6758,7 @@ window.SiteStore = (function () {
     return (
       '<div class="wa-assign"><h5>' + esc(a.title) + "</h5><p>" + esc(a.desc) + "</p>" +
       ((a.steps || []).length ? "<ol>" + list(a.steps, function (s) { return "<li>" + esc(s) + "</li>"; }) + "</ol>" : "") +
-      '<p class="small-note">제출은 위쪽 과제 칸의 버튼이나 「내 강의실」에서 합니다.</p></div>'
+      '<p class="small-note">📎 결과물은 구글 드라이브에 올려 공유 링크를 「내 강의실」에서 제출합니다.</p></div>'
     );
   }
   function sentencesHTML(arr) {
@@ -6691,6 +6774,7 @@ window.SiteStore = (function () {
       '<div class="wa-sent-opts">' +
       '<label class="ed-check"><input type="checkbox" class="wa-show-py" checked /> 병음</label>' +
       '<label class="ed-check"><input type="checkbox" class="wa-show-ko" checked /> 번역</label>' +
+      '<label class="ed-check"><input type="checkbox" class="wa-show-gram" checked /> 문법 설명</label>' +
       '<select class="wa-rate" aria-label="읽기 속도"><option value="0.7">느리게</option><option value="0.9" selected>보통</option><option value="1.1">빠르게</option></select>' +
       '<button type="button" class="btn btn-primary btn-sm wa-play-all">▶ 전체 듣기</button>' +
       '<button type="button" class="btn btn-ghost btn-sm wa-stop" hidden>■ 멈춤</button>' +
@@ -6706,6 +6790,10 @@ window.SiteStore = (function () {
           '<p class="wa-zh" lang="zh-CN">' + esc(s.zh) + ' <span class="tag tag-opt">' + esc(s.type) + "</span></p>" +
           '<p class="wa-py">' + esc(s.pinyin) + "</p>" +
           '<p class="wa-ko">' + esc(s.ko) + (s.point ? ' <small>· ' + esc(s.point) + "</small>" : "") + "</p>" +
+          (s.pattern || s.explain
+            ? '<div class="wa-gram">' + (s.pattern ? '<p class="wa-gram-pat"><span>📐 구조</span><b lang="zh-CN">' + esc(s.pattern) + "</b></p>" : "") +
+              (s.explain ? "<p>" + esc(s.explain) + "</p>" : "") + "</div>"
+            : "") +
           "</div></li>"
         );
       }) +
@@ -6799,7 +6887,10 @@ window.SiteStore = (function () {
           '<span class="cs-deco d1" aria-hidden="true"></span><span class="cs-deco d2" aria-hidden="true"></span>' +
           '<span class="cs-emoji" aria-hidden="true">' + esc(s.emoji) + "</span>" +
           '<div class="cs-text"><p class="cs-no">' + (i + 1) + " / " + slides.length + "</p><h5>" + esc(s.title) + "</h5><p>" + esc(s.text) + "</p>" +
-          (s.keyword ? '<p class="cs-key" lang="zh-CN">' + esc(s.keyword) + "</p>" : "") + "</div></section>"
+          ((s.points || []).length ? '<ul class="cs-points">' + list(s.points, function (p) { return "<li>" + esc(p) + "</li>"; }) + "</ul>" : "") +
+          (s.keyword ? '<p class="cs-key" lang="zh-CN">' + esc(s.keyword) + "</p>" : "") +
+          (s.phrase ? '<p class="cs-phrase"><button class="wa-say" type="button" data-say="' + esc(String(s.phrase).split(/\s[A-Za-zÀ-ž]/)[0]) + '" aria-label="듣기">🔊</button> <span lang="zh-CN">' + esc(s.phrase) + "</span></p>" : "") +
+          "</div></section>"
         );
       }) +
       "</div>" +
@@ -6965,6 +7056,7 @@ window.SiteStore = (function () {
   }
 
   /* ---------- 문화 슬라이드 ---------- */
+  var SLIDE_MS = 15000; /* 한 장에 글이 많아 15초씩 */
   function showSlide(cs, i) {
     var slides = cs.querySelectorAll(".cs-slide");
     cs._i = (i + slides.length) % slides.length;
@@ -6977,7 +7069,7 @@ window.SiteStore = (function () {
     bar.style.width = "0%";
     if (!cs._paused) {
       void bar.offsetWidth;
-      bar.style.transition = "width 6s linear";
+      bar.style.transition = "width " + SLIDE_MS / 1000 + "s linear";
       bar.style.width = "100%";
     }
   }
@@ -6986,7 +7078,7 @@ window.SiteStore = (function () {
     stopSlides(cs);
     cs._paused = false;
     showSlide(cs, cs._i || 0);
-    cs._timer = setInterval(function () { if (!cs._paused) showSlide(cs, cs._i + 1); }, 6000);
+    cs._timer = setInterval(function () { if (!cs._paused) showSlide(cs, cs._i + 1); }, SLIDE_MS);
   }
   function stopSlides(cs) {
     if (cs && cs._timer) clearInterval(cs._timer);
@@ -7082,6 +7174,7 @@ window.SiteStore = (function () {
     if (!el) return;
     if (e.target.classList.contains("wa-show-py")) el.querySelector(".wa-sent").classList.toggle("hide-py", !e.target.checked);
     if (e.target.classList.contains("wa-show-ko")) el.querySelector(".wa-sent").classList.toggle("hide-ko", !e.target.checked);
+    if (e.target.classList.contains("wa-show-gram")) el.querySelector(".wa-sent").classList.toggle("hide-gram", !e.target.checked);
     if (e.target.classList.contains("wa-upload")) upload(el, e.target.files);
   });
   curriculum.addEventListener("submit", function (e) {
@@ -7090,7 +7183,10 @@ window.SiteStore = (function () {
     e.preventDefault();
     var total = 0;
     var ok = 0;
-    form.querySelectorAll(".wa-q").forEach(function (q) {
+    var blank = 0;
+    var wrong = [];
+    var byType = {};
+    form.querySelectorAll(".wa-q").forEach(function (q, qi) {
       total++;
       var t = q.getAttribute("data-t");
       var a = q.getAttribute("data-a");
@@ -7099,13 +7195,114 @@ window.SiteStore = (function () {
       if (t === "blank") v = q.querySelector(".wa-blank").value.replace(/\s/g, "");
       if (t === "order") v = Array.prototype.map.call(q.querySelectorAll(".wa-order-ans .wa-tok"), function (b) { return b.textContent; }).join("");
       var right = String(v) === String(a);
-      if (right) ok++;
+      var bt = (byType[t] = byType[t] || { ok: 0, total: 0 });
+      bt.total++;
+      if (right) { ok++; bt.ok++; } else wrong.push(qi + 1);
+      if (!v) blank++;
+      q.id = q.id || "wa-q-" + Math.random().toString(36).slice(2, 8);
       q.classList.toggle("is-right", right);
       q.classList.toggle("is-wrong", !right);
-      q.querySelector(".wa-fb").hidden = false;
+      var fb = q.querySelector(".wa-fb");
+      var mark = fb.querySelector(".wa-mark");
+      if (!mark) { mark = document.createElement("b"); mark.className = "wa-mark"; fb.insertBefore(mark, fb.firstChild); }
+      mark.textContent = right ? "✓ 맞았어요! " : v ? "✗ 아쉬워요. " : "– 답을 고르지 않았어요. ";
+      fb.hidden = false;
     });
     form.querySelector(".wa-score").textContent = "점수: " + ok + " / " + total;
+    showQuizResult(form, ok, total, blank, wrong, byType);
+    if (total && ok === total) fireworks();
   });
+
+  /* 온라인 퀴즈 결과 피드백: 점수대별 한마디, 유형별 정답 수, 틀린 문제 바로가기, 공부 방법 */
+  var QTYPE = { mc: "객관식", ox: "OX", blank: "빈칸 채우기", order: "순서 맞추기" };
+  var QTIP = {
+    mc: "어휘와 문법 뜻을 다시 확인해 보세요. 이번 주 「중국어 문장」 탭의 어휘 문장을 소리 내어 읽으면 좋아요.",
+    ox: "헷갈린 설명을 강의 노트에서 다시 읽어 보세요.",
+    blank: "빈칸 단어는 한자를 직접 써 보며 외우면 오래 남아요. 병음과 성조도 함께 확인하세요.",
+    order: "어순(주어 + 부사어 + 동사 + 목적어)을 떠올리며 문장 탭의 문형 문장을 따라 읽어 보세요.",
+  };
+  function showQuizResult(form, ok, total, blank, wrong, byType) {
+    var pct = total ? Math.round((ok / total) * 100) : 0;
+    var tier =
+      pct === 100 ? ["🎉", "만점이에요! 완벽합니다.", "이번 주 내용을 확실히 익혔어요. 다음 주차로 넘어가도 좋아요."] :
+      pct >= 80 ? ["👏", "아주 잘했어요!", "몇 문제만 다시 보면 만점이에요. 틀린 문제의 해설을 확인해 보세요."] :
+      pct >= 60 ? ["🙂", "좋아요, 거의 다 왔어요.", "약한 유형을 한 번 더 복습하고 다시 풀어 보세요."] :
+      pct >= 40 ? ["💪", "조금 더 힘내요!", "강의 노트와 문장 듣기로 복습한 뒤 다시 도전해 보세요."] :
+      ["📚", "복습이 필요해요.", "강의 노트부터 천천히 다시 읽고, 문장을 들으며 따라 해 본 뒤 다시 풀어 보세요."];
+    var weak = Object.keys(byType).filter(function (k) { return byType[k].ok < byType[k].total; })
+      .sort(function (a, b) { return byType[a].ok / byType[a].total - byType[b].ok / byType[b].total; });
+    var qs = form.querySelectorAll(".wa-q");
+    var box = form.querySelector(".wa-result");
+    if (!box) {
+      box = document.createElement("div");
+      box.className = "wa-result";
+      box.setAttribute("role", "status");
+      form.appendChild(box);
+    }
+    box.classList.toggle("is-perfect", pct === 100);
+    box.innerHTML =
+      '<div class="wa-res-head"><span class="wa-res-emo" aria-hidden="true">' + tier[0] + '</span>' +
+      '<div><p class="wa-res-title">' + tier[1] + '</p><p class="wa-res-sub">' + ok + " / " + total + "문제 정답 · " + pct + "점" +
+      (blank ? " · 안 푼 문제 " + blank + "개" : "") + "</p></div></div>" +
+      '<div class="wa-res-bar" aria-hidden="true"><span style="width:' + pct + '%"></span></div>' +
+      '<ul class="wa-res-types">' + list(Object.keys(QTYPE).filter(function (k) { return byType[k]; }), function (k) {
+        var b = byType[k];
+        return '<li class="' + (b.ok === b.total ? "is-full" : "") + '"><span>' + QTYPE[k] + "</span><b>" + b.ok + " / " + b.total + "</b></li>";
+      }) + "</ul>" +
+      '<p class="wa-res-msg">' + tier[2] + "</p>" +
+      (wrong.length ? '<p class="wa-res-wrong">다시 볼 문제: ' + list(wrong, function (no) {
+        return '<a href="#' + qs[no - 1].id + '">' + no + "번</a>";
+      }) + "</p>" : "") +
+      (weak.length ? '<p class="wa-res-tip">💡 <b>' + QTYPE[weak[0]] + "</b> 유형이 가장 약해요. " + QTIP[weak[0]] + "</p>" : "");
+    box.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  /* 만점 축하 폭죽 */
+  function fireworks() {
+    var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var cv = document.createElement("canvas");
+    cv.className = "fw-canvas";
+    cv.setAttribute("aria-hidden", "true");
+    document.body.appendChild(cv);
+    var ctx = cv.getContext("2d");
+    var dpr = window.devicePixelRatio || 1;
+    var W = (cv.width = innerWidth * dpr);
+    var H = (cv.height = innerHeight * dpr);
+    var colors = ["#e0463c", "#f4b63f", "#3fa36b", "#3b82c4", "#c45bd6", "#ff8a3d", "#ffd94a"];
+    var parts = [];
+    function burst(x, y) {
+      var c = colors[Math.floor(Math.random() * colors.length)];
+      var n = reduce ? 30 : 70;
+      for (var i = 0; i < n; i++) {
+        var ang = (Math.PI * 2 * i) / n + Math.random() * 0.2;
+        var sp = (2 + Math.random() * 4.5) * dpr;
+        parts.push({ x: x, y: y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, life: 1, c: Math.random() < 0.25 ? "#fff6c8" : c, r: (1.6 + Math.random() * 1.8) * dpr });
+      }
+    }
+    var shots = reduce ? 2 : 9;
+    var fired = 0;
+    var shotTimer = setInterval(function () {
+      burst(W * (0.15 + Math.random() * 0.7), H * (0.15 + Math.random() * 0.35));
+      if (++fired >= shots) clearInterval(shotTimer);
+    }, 260);
+    var start = Date.now();
+    (function frame() {
+      ctx.clearRect(0, 0, W, H);
+      parts = parts.filter(function (p) { return p.life > 0; });
+      parts.forEach(function (p) {
+        p.x += p.vx; p.y += p.vy;
+        p.vx *= 0.97; p.vy = p.vy * 0.97 + 0.07 * dpr;
+        p.life -= 0.012;
+        ctx.globalAlpha = Math.max(p.life, 0);
+        ctx.fillStyle = p.c;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      if (Date.now() - start < 1500 || parts.length) requestAnimationFrame(frame);
+      else cv.remove();
+    })();
+  }
 
   function msg(el, text, type) {
     var m = el.querySelector(".wa-msg");

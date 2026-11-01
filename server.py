@@ -529,7 +529,7 @@ S_STR = {"type": "string"}
 WEEK_SCHEMAS = {
     "sentences": obj({"sentences": {"type": "array", "items": obj({
         "type": {"type": "string", "enum": ["어휘", "문법", "문형"]},
-        "zh": S_STR, "pinyin": S_STR, "ko": S_STR, "point": S_STR,
+        "zh": S_STR, "pinyin": S_STR, "ko": S_STR, "point": S_STR, "pattern": S_STR, "explain": S_STR,
     })}}),
     "assignment": obj({"title": S_STR, "desc": S_STR, "steps": {"type": "array", "items": S_STR}}),
     "onlinequiz": obj({
@@ -538,7 +538,9 @@ WEEK_SCHEMAS = {
         "blank": {"type": "array", "items": obj({"sentence": S_STR, "answer": S_STR, "pinyin": S_STR, "ko": S_STR})},
         "order": {"type": "array", "items": obj({"ko": S_STR, "tokens": {"type": "array", "items": S_STR}})},
     }),
-    "culture": obj({"slides": {"type": "array", "items": obj({"title": S_STR, "emoji": S_STR, "text": S_STR, "keyword": S_STR})}}),
+    "culture": obj({"slides": {"type": "array", "items": obj({"title": S_STR, "emoji": S_STR, "text": S_STR,
+                                                               "points": {"type": "array", "items": S_STR},
+                                                               "keyword": S_STR, "phrase": S_STR})}}),
     "notes": obj({
         "title": S_STR, "summary": S_STR,
         "sections": {"type": "array", "items": obj({"heading": S_STR, "points": {"type": "array", "items": S_STR}})},
@@ -574,12 +576,13 @@ def week_prompt(kind, info):
             "  · 어휘: 주제 관련 핵심 단어가 들어간 짧은 문장\n  · 문법: 이 주차 문법 포인트를 쓰는 문장\n  · 문형: 바꿔 말하기 연습에 좋은 회화 문형\n"
             "- zh는 중국어 문장, pinyin은 한어병음(성조 부호), ko는 자연스러운 한국어 번역입니다.\n"
             "- point에는 이 문장에서 익힐 단어나 문법을 한국어 10자 안팎으로 씁니다.\n"
+            "- 문법 문장에는 pattern(구조식, 예: '从 + 시작 시간 + 到 + 끝 시간 + 동사')과 explain(2~3문장 한국어 설명: 뜻과 쓰임, 어순이나 위치, 자주 하는 실수나 비슷한 표현과의 차이)을 꼭 씁니다. 어휘·문형 문장은 pattern과 explain을 빈 문자열로 둡니다.\n"
             "- 쉬운 것에서 어려운 것 순서로, 실제 대학생 생활에서 쓸 만한 문장으로 만듭니다."
         )
     if kind == "assignment":
         return b + (
             "이 주차에 내 줄 과제를 하나 만들어 주세요.\n"
-            "- title은 15자 이내, desc는 학생이 무엇을 어떤 형식으로 제출하는지 2문장으로 씁니다.\n"
+            "- title은 15자 이내, desc는 학생이 무엇을 만들어 제출하는지 2문장으로 씁니다. 제출은 언제나 결과물(녹음·문서·시트 등)을 구글 드라이브에 올린 뒤 공유 링크를 내는 방식입니다.\n"
             "- steps는 과제를 하는 순서 3~4단계입니다. 녹음·작문·AI 도구 활용 중 이 주제에 맞는 방식을 고릅니다."
         )
     if kind == "onlinequiz":
@@ -593,7 +596,10 @@ def week_prompt(kind, info):
     if kind == "culture":
         return b + (
             "이 주차 주제와 어울리는 중국 문화 정보를 슬라이드 10장으로 만들어 주세요.\n"
-            "- title은 12자 이내 제목, emoji는 내용을 나타내는 이모지 1개, text는 대학생이 흥미로워할 사실 2문장(한국어, 필요하면 중국어 단어와 병음), keyword는 관련 중국어 단어 하나(병음 포함)입니다.\n"
+            "- title은 12자 이내 제목, emoji는 내용을 나타내는 이모지 1개입니다.\n"
+            "- text는 대학생이 흥미로워할 사실과 배경(유래·숫자·예시)을 담은 3문장(한국어, 필요하면 중국어 단어와 병음)입니다.\n"
+            "- points는 더 알아두면 좋은 짧은 사실 3개(각 40자 이내)입니다.\n"
+            "- keyword는 관련 중국어 단어 하나(병음 포함), phrase는 그 주제로 쓸 수 있는 짧은 중국어 문장 하나를 '중국어 병음 — 한국어 뜻' 형식으로 적습니다.\n"
             "- 정확한 사실만 쓰고, 과장하거나 고정관념을 담지 않습니다."
         )
     if kind == "notes":
@@ -621,7 +627,8 @@ def clean_week_result(kind, data):
             if zh:
                 out.append({"type": s.get("type") if s.get("type") in ("어휘", "문법", "문형") else "문형",
                             "zh": zh[:200], "pinyin": str(s.get("pinyin") or "")[:300], "ko": str(s.get("ko") or "")[:200],
-                            "point": str(s.get("point") or "")[:60]})
+                            "point": str(s.get("point") or "")[:60],
+                            "pattern": str(s.get("pattern") or "")[:120], "explain": str(s.get("explain") or "")[:500]})
         if not out:
             raise ValueError("문장을 만들지 못했습니다.")
         return out[:60]
@@ -658,7 +665,9 @@ def clean_week_result(kind, data):
         slides = []
         for s in data.get("slides") or []:
             if s.get("title"):
-                slides.append({"title": str(s["title"])[:40], "emoji": str(s.get("emoji") or "🏮")[:8], "text": str(s.get("text") or "")[:400], "keyword": str(s.get("keyword") or "")[:60]})
+                slides.append({"title": str(s["title"])[:40], "emoji": str(s.get("emoji") or "🏮")[:8], "text": str(s.get("text") or "")[:700],
+                               "points": [str(x)[:120] for x in (s.get("points") or []) if str(x).strip()][:4],
+                               "keyword": str(s.get("keyword") or "")[:60], "phrase": str(s.get("phrase") or "")[:200]})
         if not slides:
             raise ValueError("슬라이드를 만들지 못했습니다.")
         return slides[:12]
