@@ -706,6 +706,35 @@ def clean_week_result(kind, data):
     return data
 
 
+# 저장 필드 ↔ 생성 종류 (직접 편집·AI 수정용)
+FIELD_KIND = {"notes": "notes", "assignment": "assignment", "sentences": "sentences",
+              "onlineQuiz": "onlinequiz", "liveQuiz": "livequiz", "culture": "culture"}
+KIND_FIELD = {v: k for k, v in FIELD_KIND.items()}
+
+
+def wrap_for_clean(kind, value):
+    """저장된 모양 → AI 응답 모양 (clean_week_result에 넣을 수 있게)"""
+    if kind == "sentences":
+        return {"sentences": value if isinstance(value, list) else []}
+    if kind == "culture":
+        return {"slides": value if isinstance(value, list) else []}
+    return value if isinstance(value, dict) else {}
+
+
+def keep_images(kind, old, new):
+    """편집·수정 뒤에도 슬라이드마다 만들어 둔 그림은 같은 순서의 장에 그대로 둠"""
+    if kind == "culture":
+        olds, news = old or [], new
+    elif kind == "notes":
+        olds, news = (old or {}).get("slides") or [], new.get("slides") or []
+    else:
+        return new
+    for i, sl in enumerate(news):
+        if i < len(olds) and olds[i].get("img") and not sl.get("img"):
+            sl["img"] = olds[i]["img"]
+    return new
+
+
 def image_prompts(info):
     topic = "%s (%s)" % (info.get("title", ""), info.get("expression", "")) if info.get("expression") else info.get("title", "")
     style = "Japanese anime style illustration, soft cel shading, warm pastel colors, clean lines, 16:9 wide composition, no text, no letters, no captions"
@@ -1079,8 +1108,22 @@ class Handler(SimpleHTTPRequestHandler):
             elif kind in WEEK_SCHEMAS:
                 # 관리자가 이 주차에 올린 참고 자료를 반드시 함께 보냄
                 refs = [f for f in week_files(key) if f.get("kind") in ("pdf", "text")]
-                result = clean_week_result(kind, ai_json(week_prompt(kind, info), WEEK_SCHEMAS[kind],
+                prompt = week_prompt(kind, info)
+                instruction = str(data.get("instruction") or "").strip()[:2000]
+                old = (load_weeks().get(key) or {}).get(KIND_FIELD.get(kind, ""))
+                if instruction:
+                    if not old:
+                        return self.error("고칠 자료가 아직 없습니다. 먼저 만들어 주세요.")
+                    prompt += (
+                        "\n\n[지금 자료]\n" + json.dumps(wrap_for_clean(kind, old), ensure_ascii=False) +
+                        "\n\n[수정 요청]\n" + instruction +
+                        "\n\n지금 자료를 바탕으로 수정 요청을 반영해 같은 형식으로 전체를 다시 돌려주세요. "
+                        "요청하지 않은 부분은 그대로 두고, 위의 만들기 조건과 형식은 계속 지킵니다."
+                    )
+                result = clean_week_result(kind, ai_json(prompt, WEEK_SCHEMAS[kind],
                                                          baze_key if provider == "baze" else "", refs=refs))
+                if instruction:
+                    result = keep_images(kind, old, result)
             else:
                 return self.error("알 수 없는 생성 종류입니다.")
         except anthropic.AuthenticationError:
@@ -1234,7 +1277,7 @@ class Handler(SimpleHTTPRequestHandler):
         return self.send_json({"week": key, "content": wc, "saved": saved})
 
     def week_save(self, data):
-        """유튜브 주소 등 직접 입력한 값 저장"""
+        """유튜브 주소, 직접 편집한 자료 등 저장"""
         if not self.host_ok(data.get("password")):
             return self.error("교수자 비밀번호가 맞지 않습니다.", 403)
         key = self.week_key(data)
@@ -1247,6 +1290,14 @@ class Handler(SimpleHTTPRequestHandler):
             for field in ("videos", "songs"):
                 if field in patch:
                     wc[field] = [str(u).strip()[:300] for u in (patch[field] or [])][:2]
+            edit = patch.get("edit")
+            if isinstance(edit, dict) and edit.get("field") in FIELD_KIND:
+                kind = FIELD_KIND[edit["field"]]
+                try:
+                    value = clean_week_result(kind, wrap_for_clean(kind, edit.get("value")))
+                except ValueError as e:
+                    return self.error("저장하지 못했습니다: " + str(e))
+                wc[edit["field"]] = keep_images(kind, wc.get(edit["field"]), value)
             if patch.get("clear") in ("sentences", "assignment", "onlineQuiz", "culture", "liveQuiz", "images", "videos", "songs"):
                 wc.pop(patch["clear"], None)
             wc["updatedAt"] = int(time.time())

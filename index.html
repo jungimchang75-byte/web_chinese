@@ -2130,6 +2130,30 @@ a { color: var(--green-700); }
 .wa-admin-title { margin: 0; font-weight: 800; color: var(--green-800, #1d4f45); }
 .wa-admin-title small { font-weight: 500; color: var(--text-soft); }
 .wa-batch-box { margin-bottom: 16px; }
+/* 직접 편집 · AI 수정 */
+.wa-edit-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 12px; border: 1px dashed var(--green-500, #3b7a68); background: var(--green-100, #e2ece5); }
+.wa-edit-bar.is-editing { position: sticky; top: 70px; z-index: 5; border-style: solid; background: #fff6df; }
+.wa-edit-state { flex: 1; font-weight: 700; color: #8a5a2b; }
+.wa-revise { flex: 1; display: flex; gap: 8px; min-width: 260px; }
+.wa-revise-in { flex: 1; min-width: 0; min-height: 36px; padding: 0 12px; border: 1px solid var(--line, #e2dacb); border-radius: 10px; font: inherit; font-size: 14px; background: var(--surface, #fff); }
+.wa-edit-bar .ai-dig { flex-basis: 100%; }
+.wa-editor { display: grid; gap: 10px; }
+.ed-field { display: grid; gap: 4px; }
+.ed-group { padding: 10px 12px; border-radius: 12px; background: var(--cream-100, #efe9df); }
+.ed-label { font-size: 13px; font-weight: 800; color: var(--green-700, #1f5547); }
+.ed-in { width: 100%; padding: 7px 10px; border: 1px solid var(--line, #e2dacb); border-radius: 8px; font: inherit; font-size: 14px; line-height: 1.5; background: var(--surface, #fff); resize: vertical; }
+.ed-in:focus { outline: 2px solid var(--ochre-300, #e0b13f); outline-offset: 1px; }
+.ed-num { max-width: 120px; }
+select.ed-in { max-width: 200px; }
+.ed-arr { display: grid; gap: 6px; }
+.ed-arr > .ed-add { justify-self: start; }
+.ed-row { display: flex; align-items: flex-start; gap: 6px; }
+.ed-no { flex: none; min-width: 22px; padding-top: 8px; font-size: 12px; font-weight: 700; color: var(--text-soft, #888); }
+.ed-item { margin: 0; padding: 8px 12px 12px; border: 1px solid var(--line, #e2dacb); border-radius: 12px; background: var(--surface, #fff); display: grid; gap: 8px; }
+.ed-item legend { display: flex; align-items: center; gap: 8px; padding: 0 6px; font-weight: 800; color: var(--green-800, #1d4f45); }
+.ed-tools { display: inline-flex; gap: 4px; }
+.ed-tools button { width: 28px; height: 28px; border: 0; border-radius: 50%; font-size: 13px; background: var(--cream-100, #efe9df); cursor: pointer; }
+.ed-tools .ed-del:hover { background: #fbefea; color: #b0452c; }
 .wa-batch-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .wa-batch-scope { min-height: 36px; padding: 0 10px; border: 1px solid var(--line, #e2dacb); border-radius: 10px; font: inherit; font-size: 14px; background: var(--surface, #fff); }
 .wa-batch-msg { margin: 0 !important; }
@@ -2253,7 +2277,7 @@ window.SITE_CONFIG = {
     semester: "2026학년도 1학기",
     // 사이트 버전 — 제목 오른쪽에 빨간 글씨로 표시됩니다.
     // 관리자 화면에서 저장할 때마다 마지막 자리가 1씩 자동으로 올라갑니다 (v1.0.0 → v1.0.1).
-    version: "v1.3.4",
+    version: "v1.3.5",
     logoText: "漢",
   },
 
@@ -7008,7 +7032,8 @@ window.SiteStore = (function () {
         ? '<div class="wa-tabs" role="tablist">' + list(tabs, function (t) {
             return '<button type="button" role="tab" data-tab="' + t.id + '" aria-selected="' + (t.id === cur) + '" class="' + (t.id === cur ? "is-on" : "") + '">' + t.label + "</button>";
           }) + "</div>" +
-          '<div class="wa-body">' + tabBody(cur, c, w, n) + "</div>"
+          editBarHTML(el, cur) +
+          '<div class="wa-body">' + (el._editing === cur ? editorHTML(el, cur) : tabBody(cur, c, w, n)) + "</div>"
         : '<p class="wa-empty">아직 만든 자료가 없습니다. 위의 버튼으로 만들어 보세요.</p>') +
       "</div>";
     if (cur === "culture" || cur === "notes") startSlides(el.querySelector(".cs"));
@@ -7043,6 +7068,176 @@ window.SiteStore = (function () {
     var bh = document.querySelector(".wa-batch");
     if (bh && bh._admin !== isAdmin() && !batch.running) renderBatch();
   }, 1500);
+
+  /* ---------- 직접 편집 · AI 수정 (관리자) ----------
+     자료 모양(객체·배열·글)을 그대로 따라 편집 칸을 만들고, 고친 내용은 el._draft에 담았다가 저장합니다. */
+  var EDITABLE = { notes: "notes", assignment: "assignment", sentences: "sentences", onlineQuiz: "onlinequiz", liveQuiz: "livequiz", culture: "culture" };
+  var ED_LABEL = {
+    title: "제목", desc: "설명", steps: "하는 순서", summary: "요약", sections: "수업 단계", heading: "소제목", points: "내용",
+    expressions: "핵심 표현", zh: "중국어", pinyin: "병음", ko: "한국어", questions: "질문", slides: "슬라이드", emoji: "이모지",
+    image: "그림 설명 (영어, 그림 만들 때 씀)", text: "설명", keyword: "키워드", phrase: "듣기 문장", type: "종류", point: "익힐 점",
+    pattern: "문법 구조", explain: "문법 설명", mc: "객관식", ox: "OX", blank: "빈칸 채우기", order: "순서 맞추기", q: "문제",
+    choices: "보기", answer: "정답", explanation: "해설", sentence: "문장 (빈칸은 ＿＿)", tokens: "낱말 (바른 순서로)", time: "제한 시간(초)",
+  };
+  var ED_HIDE = { img: 1 };
+  function editBarHTML(el, cur) {
+    if (!isAdmin() || !EDITABLE[cur]) return "";
+    if (el._editing === cur) {
+      return (
+        '<div class="wa-edit-bar is-editing"><span class="wa-edit-state">✏️ 편집 중 — 고친 뒤 「저장」을 누르세요</span>' +
+        '<button type="button" class="btn btn-primary btn-sm wa-ed-save">💾 저장</button>' +
+        '<button type="button" class="btn btn-ghost btn-sm wa-ed-cancel">취소</button></div>'
+      );
+    }
+    return (
+      '<div class="wa-edit-bar">' +
+      '<button type="button" class="btn btn-ghost btn-sm wa-ed-open">✏️ 직접 편집</button>' +
+      '<form class="wa-revise" novalidate><input class="wa-revise-in" maxlength="2000" placeholder="AI 수정 요청 (예: 3번 슬라이드를 더 쉽게, 예문을 대학생 생활 위주로)" aria-label="AI 수정 요청" />' +
+      '<button type="submit" class="btn btn-primary btn-sm"' + (health === false ? " disabled" : "") + ">🤖 AI로 수정</button></form>" +
+      "</div>"
+    );
+  }
+  function edLabel(key, val) {
+    if (key === "answer") return typeof val === "boolean" ? "정답 (O/X)" : typeof val === "number" ? "정답 번호 (첫 보기 = 0)" : "정답";
+    return ED_LABEL[key] || key;
+  }
+  function edBlank(v) {
+    if (Array.isArray(v)) return [];
+    if (v && typeof v === "object") {
+      var o = {};
+      Object.keys(v).forEach(function (k) { if (!ED_HIDE[k]) o[k] = edBlank(v[k]); });
+      return o;
+    }
+    return typeof v === "number" ? 0 : typeof v === "boolean" ? true : "";
+  }
+  function edNode(v, path, key) {
+    var ps = esc(JSON.stringify(path));
+    if (Array.isArray(v)) {
+      var objs = v.length && v[0] && typeof v[0] === "object";
+      return (
+        '<div class="ed-arr">' +
+        list(v, function (item, i) {
+          var sub = path.concat(i);
+          var tools = '<span class="ed-tools"><button type="button" class="ed-up" data-p="' + esc(JSON.stringify(sub)) + '" aria-label="위로">↑</button>' +
+            '<button type="button" class="ed-del" data-p="' + esc(JSON.stringify(sub)) + '" aria-label="지우기">✕</button></span>';
+          return objs
+            ? '<fieldset class="ed-item"><legend>' + (i + 1) + tools + "</legend>" + edNode(item, sub, key) + "</fieldset>"
+            : '<div class="ed-row"><span class="ed-no">' + (i + 1) + "</span>" + edNode(item, sub, key) + tools + "</div>";
+        }) +
+        '<button type="button" class="btn btn-ghost btn-sm ed-add" data-p="' + ps + '">＋ 추가</button></div>'
+      );
+    }
+    if (v && typeof v === "object") {
+      return list(Object.keys(v).filter(function (k) { return !ED_HIDE[k]; }), function (k) {
+        var big = Array.isArray(v[k]) || (v[k] && typeof v[k] === "object");
+        return '<div class="ed-field' + (big ? " ed-group" : "") + '"><span class="ed-label">' + esc(edLabel(k, v[k])) + "</span>" + edNode(v[k], path.concat(k), k) + "</div>";
+      });
+    }
+    if (typeof v === "boolean") {
+      return '<select class="ed-in" data-p="' + ps + '" data-t="bool"><option value="1"' + (v ? " selected" : "") + '>O (맞다)</option><option value="0"' + (v ? "" : " selected") + ">X (틀리다)</option></select>";
+    }
+    if (typeof v === "number") return '<input class="ed-in ed-num" type="number" data-p="' + ps + '" data-t="num" value="' + v + '" />';
+    if (key === "type") {
+      return '<select class="ed-in" data-p="' + ps + '">' + list(["어휘", "문법", "문형"], function (t) { return '<option' + (t === v ? " selected" : "") + ">" + t + "</option>"; }) + "</select>";
+    }
+    var str = String(v == null ? "" : v);
+    var rows = Math.min(8, Math.max(1, Math.ceil(str.length / 60)));
+    return '<textarea class="ed-in" rows="' + rows + '" data-p="' + ps + '"' + (/^(zh|sentence|tokens)$/.test(key) ? ' lang="zh-CN"' : "") + ">" + esc(str) + "</textarea>";
+  }
+  function editorHTML(el, cur) {
+    return '<div class="wa-editor">' + edNode(el._draft, [], cur) + "</div>";
+  }
+  function edGet(obj, path) { return path.reduce(function (o, k) { return o[k]; }, obj); }
+  function edSet(obj, path, val) { edGet(obj, path.slice(0, -1))[path[path.length - 1]] = val; }
+  function startEdit(el) {
+    var cur = el._tab;
+    el._draft = JSON.parse(JSON.stringify(content(el.getAttribute("data-week"))[cur]));
+    el._editing = cur;
+    renderPanel(el);
+  }
+  function saveEdit(el) {
+    var n = el.getAttribute("data-week");
+    var field = el._editing;
+    var btn = el.querySelector(".wa-ed-save");
+    btn.disabled = true;
+    post("/api/week/save", { week: n, patch: { edit: { field: field, value: el._draft } }, password: pass() }).then(function (d) {
+      WC[n] = d.content;
+      el._editing = null;
+      el._draft = null;
+      renderPanel(el);
+      msg(el, "✓ 고친 내용을 저장했습니다." + savedNote(d), "ok");
+    }, function (err) {
+      btn.disabled = false;
+      msg(el, err.message, "error");
+    });
+  }
+  function reviseAI(el, form) {
+    var n = el.getAttribute("data-week");
+    var field = el._tab;
+    var kind = EDITABLE[field];
+    var text = form.querySelector(".wa-revise-in").value.trim();
+    if (!text) return msg(el, "AI에게 어떻게 고칠지 적어 주세요.", "error");
+    form.querySelector("button").disabled = true;
+    var label = (TABS.filter(function (t) { return t.id === field; })[0] || {}).label || "";
+    var dig = window.SiteDig.start(form.parentNode, label + " 고치는 중 · 30초~1분 걸립니다");
+    post("/api/week/generate", { week: n, kind: kind, instruction: text, info: info(n), provider: provider(), bazeKey: provider() === "baze" ? S.prefGet("bazeKey", "") : "", password: pass() })
+      .then(function (d) {
+        dig.stop();
+        WC[n] = d.content;
+        renderPanel(el);
+        msg(el, "✓ 요청대로 고쳤습니다. 마음에 들지 않으면 「직접 편집」이나 다른 요청으로 다시 고칠 수 있어요." + savedNote(d), "ok");
+      }, function (err) {
+        dig.stop();
+        form.querySelector("button").disabled = false;
+        msg(el, err.message, "error");
+      });
+  }
+  curriculum.addEventListener("input", function (e) {
+    var inp = e.target.closest(".ed-in");
+    var el = inp && inp.closest(".week-ai");
+    if (!el || !el._draft) return;
+    var t = inp.getAttribute("data-t");
+    var v = t === "num" ? Number(inp.value) || 0 : t === "bool" ? inp.value === "1" : inp.value;
+    edSet(el._draft, JSON.parse(inp.getAttribute("data-p")), v);
+  });
+  curriculum.addEventListener("change", function (e) {
+    var inp = e.target.closest("select.ed-in");
+    if (inp) inp.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  curriculum.addEventListener("submit", function (e) {
+    var form = e.target.closest(".wa-revise");
+    if (!form) return;
+    e.preventDefault();
+    reviseAI(form.closest(".week-ai"), form);
+  });
+  curriculum.addEventListener("click", function (e) {
+    var t = e.target;
+    var el = t.closest(".week-ai");
+    if (!el) return;
+    if (t.closest(".wa-ed-open")) return startEdit(el);
+    if (t.closest(".wa-ed-cancel")) {
+      if (!confirm("고친 내용을 버리고 편집을 그만둘까요?")) return;
+      el._editing = null;
+      el._draft = null;
+      return renderPanel(el);
+    }
+    if (t.closest(".wa-ed-save")) return saveEdit(el);
+    var b = t.closest(".ed-add, .ed-del, .ed-up");
+    if (!b || !el._draft) return;
+    var path = JSON.parse(b.getAttribute("data-p"));
+    if (b.classList.contains("ed-add")) {
+      var arr = edGet(el._draft, path);
+      arr.push(arr.length ? edBlank(arr[arr.length - 1]) : "");
+    } else {
+      var i = path.pop();
+      var parent = edGet(el._draft, path);
+      if (b.classList.contains("ed-del")) parent.splice(i, 1);
+      else if (i > 0) parent.splice(i - 1, 0, parent.splice(i, 1)[0]);
+    }
+    var y = window.scrollY;
+    renderPanel(el);
+    window.scrollTo({ top: y, behavior: "instant" });
+  });
 
   /* ---------- 모든 주차 일괄 생성 (관리자) ---------- */
   var batch = { running: false, stop: false };
@@ -7301,6 +7496,9 @@ window.SiteStore = (function () {
     if (tab) {
       stopSpeak();
       stopSlides(el.querySelector(".cs"));
+      if (el._editing && !confirm("편집 중인 내용이 저장되지 않았습니다. 탭을 바꿀까요?")) return;
+      el._editing = null;
+      el._draft = null;
       el._tab = tab.getAttribute("data-tab");
       return renderPanel(el);
     }
