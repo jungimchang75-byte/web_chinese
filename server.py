@@ -4,6 +4,7 @@
 환경변수
   PORT                  포트 번호 (Railway가 자동으로 넣어 줌)
   ANTHROPIC_API_KEY     AI 문제 출제용 Claude API 키 (없으면 '프롬프트 복사' 방식으로 안내)
+  BAZE_API_KEY          (선택) 고려대학교 BAZE API Gateway 키. 화면에서 입력한 키가 있으면 그 키를 먼저 씀
   QUIZ_HOST_PASSWORD    설정하면 퀴즈 만들기·AI 출제에 이 비밀번호가 필요 (배포 시 꼭 설정)
 
 퀴즈 방과 기록은 서버 메모리에만 있으므로, 끝나면 결과 CSV를 내려받아 두세요.
@@ -36,8 +37,21 @@ rooms_lock = threading.Lock()
 ai_calls = {}  # ip -> [timestamps]
 
 
-def ai_available():
+# BAZE(고려대학교 API Gateway)의 Anthropic Messages API 호환 주소
+# https://docs.factchat.kr/docs/korea-seoul/api-gateway/getting-started/overview
+BAZE_BASE_URL = "https://api.baze.co/v1/gateway/claude"
+
+
+def claude_available():
     return anthropic is not None and bool(os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN"))
+
+
+def baze_server_key():
+    return os.environ.get("BAZE_API_KEY", "")
+
+
+def ai_available():
+    return claude_available() or (anthropic is not None and bool(baze_server_key()))
 
 
 def lan_ip():
@@ -256,7 +270,47 @@ def build_prompt(topic, level, count, extra):
     )
 
 
-def generate_questions(topic, level, count, extra):
+JSON_ONLY = (
+    "\n다른 설명 없이 아래 형식의 JSON만 답해 주세요.\n"
+    '{"questions":[{"question":"질문","choices":["보기1","보기2","보기3","보기4"],"answer":0,"explanation":"해설"}]}'
+)
+
+
+def parse_questions(resp):
+    if resp.stop_reason == "refusal":
+        raise ValueError("AI가 이 주제로는 문제를 만들지 않았습니다. 주제를 바꿔 보세요.")
+    if resp.stop_reason == "max_tokens":
+        raise ValueError("문항이 너무 많아 끝까지 만들지 못했습니다. 문항 수를 줄여 보세요.")
+    text = next((b.text for b in resp.content if b.type == "text"), "")
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        # 코드 블록 등 앞뒤 글이 붙은 경우 { … } 부분만 읽기
+        data = json.loads(text[text.index("{"): text.rindex("}") + 1])
+    return clean_questions(data.get("questions"))
+
+
+def generate_questions(topic, level, count, extra, baze_key=""):
+    prompt = build_prompt(topic, level, count, extra)
+    if baze_key:
+        # BAZE 게이트웨이: Anthropic Messages API와 같은 형식이라 SDK의 주소만 바꿔 호출
+        client = anthropic.Anthropic(api_key=baze_key, base_url=BAZE_BASE_URL)
+        try:
+            resp = client.messages.create(
+                model=MODEL,
+                max_tokens=16000,
+                output_config={"effort": "low", "format": {"type": "json_schema", "schema": QUIZ_SCHEMA}},
+                messages=[{"role": "user", "content": prompt}],
+            )
+        except anthropic.BadRequestError:
+            # 게이트웨이가 구조화 출력 옵션을 받지 않으면 JSON 형식을 글로 요청해 다시 시도
+            resp = client.messages.create(
+                model=MODEL,
+                max_tokens=16000,
+                messages=[{"role": "user", "content": prompt + JSON_ONLY}],
+            )
+        return parse_questions(resp)
+
     client = anthropic.Anthropic()
     resp = client.beta.messages.create(
         model=MODEL,
@@ -264,15 +318,9 @@ def generate_questions(topic, level, count, extra):
         betas=["server-side-fallback-2026-07-01"],
         fallbacks="default",  # 안전 필터가 거절하면 서버가 다른 모델로 다시 시도
         output_config={"effort": "low", "format": {"type": "json_schema", "schema": QUIZ_SCHEMA}},
-        messages=[{"role": "user", "content": build_prompt(topic, level, count, extra)}],
+        messages=[{"role": "user", "content": prompt}],
     )
-    if resp.stop_reason == "refusal":
-        raise ValueError("AI가 이 주제로는 문제를 만들지 않았습니다. 주제를 바꿔 보세요.")
-    if resp.stop_reason == "max_tokens":
-        raise ValueError("문항이 너무 많아 끝까지 만들지 못했습니다. 문항 수를 줄여 보세요.")
-    text = next((b.text for b in resp.content if b.type == "text"), "")
-    data = json.loads(text)
-    return clean_questions(data.get("questions"))
+    return parse_questions(resp)
 
 
 # ---------------------------------------------------------------- HTTP
@@ -339,7 +387,8 @@ class Handler(SimpleHTTPRequestHandler):
         if url.path == "/api/health":
             ip = lan_ip()
             return self.send_json({
-                "ok": True, "ai": ai_available(), "model": MODEL, "hostPasswordRequired": bool(HOST_PASSWORD),
+                "ok": True, "ai": ai_available(), "claude": claude_available(), "baze": anthropic is not None and bool(baze_server_key()),
+                "sdk": anthropic is not None, "model": MODEL, "hostPasswordRequired": bool(HOST_PASSWORD),
                 "lanUrl": "http://%s:%d" % (ip, PORT) if ip else None,
             })
         if len(parts) >= 4 and parts[1] == "quiz":
@@ -514,8 +563,17 @@ class Handler(SimpleHTTPRequestHandler):
     def ai_questions(self, data):
         if not self.host_ok(data.get("password")):
             return self.error("교수자 비밀번호가 맞지 않습니다.", 403)
-        if not ai_available():
-            return self.error("서버에 Claude API 키(ANTHROPIC_API_KEY)가 설정되어 있지 않습니다. '프롬프트 복사' 방식을 이용해 주세요.", 503)
+        if anthropic is None:
+            return self.error("서버에 anthropic 패키지가 없습니다. 'pip install -r requirements.txt'를 실행해 주세요.", 503)
+        provider = "baze" if data.get("provider") == "baze" else "claude"
+        baze_key = ""
+        if provider == "baze":
+            baze_key = str(data.get("bazeKey") or "").strip()[:300] or baze_server_key()
+            if not baze_key:
+                return self.error("BAZE API 키가 없습니다. 화면에서 BAZE API 키를 저장해 주세요.", 503)
+        elif not claude_available():
+            return self.error("서버에 Claude API 키(ANTHROPIC_API_KEY)가 설정되어 있지 않습니다. BAZE API 키를 쓰거나 '프롬프트 복사' 방식을 이용해 주세요.", 503)
+        name = "BAZE" if provider == "baze" else "Claude API"
         ip = self.client_address[0]
         now = time.time()
         recent = [t for t in ai_calls.get(ip, []) if now - t < 3600]
@@ -532,15 +590,17 @@ class Handler(SimpleHTTPRequestHandler):
         if not topic:
             return self.error("출제 주제를 입력해 주세요.")
         try:
-            questions = generate_questions(topic, level, count, extra)
+            questions = generate_questions(topic, level, count, extra, baze_key)
         except anthropic.AuthenticationError:
-            return self.error("Claude API 키가 올바르지 않습니다.", 502)
+            return self.error("%s 키가 올바르지 않습니다." % name, 502)
+        except anthropic.PermissionDeniedError:
+            return self.error("%s 키에 이 모델(%s)을 쓸 권한이 없습니다." % (name, MODEL), 502)
         except anthropic.RateLimitError:
-            return self.error("Claude API 사용량 한도에 걸렸습니다. 잠시 뒤에 다시 시도해 주세요.", 503)
+            return self.error("%s 사용량 한도에 걸렸습니다. 잠시 뒤에 다시 시도해 주세요." % name, 503)
         except anthropic.APIStatusError as e:
-            return self.error("Claude API 오류 (%s): %s" % (e.status_code, e.message), 502)
+            return self.error("%s 오류 (%s): %s" % (name, e.status_code, e.message), 502)
         except anthropic.APIConnectionError:
-            return self.error("Claude API에 연결할 수 없습니다. 인터넷 연결을 확인해 주세요.", 502)
+            return self.error("%s에 연결할 수 없습니다. 인터넷 연결을 확인해 주세요." % name, 502)
         except (ValueError, json.JSONDecodeError) as e:
             return self.error(str(e) or "AI 응답을 읽지 못했습니다. 다시 시도해 주세요.", 502)
         if not questions:
@@ -578,7 +638,8 @@ def main():
     print("  이 PC에서:        http://localhost:%d" % PORT)
     if ip:
         print("  같은 Wi-Fi 휴대폰: http://%s:%d" % (ip, PORT))
-    print("  AI 문제 출제:      %s" % ("사용 가능" if ai_available() else "꺼짐 (ANTHROPIC_API_KEY 없음 → 프롬프트 복사 방식)"))
+    print("  Claude API 키:     %s" % ("설정됨" if claude_available() else "없음"))
+    print("  BAZE API 키:       %s" % ("서버에 설정됨" if baze_server_key() else "없음 (퀴즈 화면에서 입력 가능)"))
     print("  교수자 비밀번호:   %s" % ("설정됨" if HOST_PASSWORD else "없음 (배포할 때는 QUIZ_HOST_PASSWORD를 설정하세요)"))
     print("끄려면 Ctrl+C")
     try:

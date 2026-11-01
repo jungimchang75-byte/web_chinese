@@ -1826,6 +1826,15 @@ a { color: var(--green-700); }
 .footer-bottom p { margin: 0; line-height: 1.8; }
 .notice-form.is-editing { outline: 2px solid var(--green-500); }
 .notice-options { display: flex; flex-wrap: wrap; gap: 6px 20px; }
+.ai-keys { display: grid; gap: 8px; padding: 12px; border-radius: 12px; background: var(--surface); box-shadow: var(--raise); }
+.ai-keys-title { margin: 0; font-weight: 700; color: var(--green-800); }
+.ai-provider { display: grid; gap: 4px; }
+.ai-provider small { font-weight: 500; }
+.key-ok { color: var(--green-500); }
+.key-none { color: #a3412f; }
+.baze-key-box { display: grid; gap: 8px; }
+.baze-key-box[hidden] { display: none; }
+.baze-docs { align-self: center; font-size: 13px; color: var(--green-700); }
 .popup-notices { display: grid; gap: 12px; max-height: 50vh; overflow-y: auto; margin-bottom: 16px; }
 .popup-notice { padding: 12px 14px; border-radius: 12px; background: var(--cream-100); box-shadow: var(--press); }
 .popup-notice h3 { margin: 0 0 2px; font-size: 16px; color: var(--green-800); }
@@ -1959,7 +1968,7 @@ window.SITE_CONFIG = {
     semester: "2026학년도 1학기",
     // 사이트 버전 — 제목 오른쪽에 빨간 글씨로 표시됩니다.
     // 관리자 화면에서 저장할 때마다 마지막 자리가 1씩 자동으로 올라갑니다 (v1.0.0 → v1.0.1).
-    version: "v1.1.4",
+    version: "v1.1.5",
     logoText: "漢",
   },
 
@@ -5527,14 +5536,44 @@ window.SiteStore = (function () {
     );
   }
 
+  /* 사용할 AI 키: "claude"(서버의 Claude API 키) 또는 "baze"(BAZE API 키) */
+  function currentProvider() {
+    var saved = S.prefGet("aiProvider", "");
+    if (saved === "claude" || saved === "baze") return saved;
+    var hasClaude = !!(health && health.claude);
+    return !hasClaude && S.prefGet("bazeKey", "") ? "baze" : "claude";
+  }
   function aiPanel() {
-    var aiOn = health && health.ai;
+    var bazeKey = S.prefGet("bazeKey", "");
+    var provider = currentProvider();
+    var hasClaude = !!(health && health.claude);
+    var aiOn = provider === "baze" ? !!bazeKey || !!(health && health.baze) : hasClaude;
     return (
       '<section class="qz-ai">' +
       "<h3>🤖 AI로 문제 만들기</h3>" +
+      '<div class="ai-keys">' +
+      '<p class="ai-keys-title">🔑 사용할 AI 키</p>' +
+      '<div class="ai-provider" role="radiogroup" aria-label="사용할 AI 키">' +
+      '<label class="ed-check"><input type="radio" name="ai-provider" value="claude"' + (provider === "claude" ? " checked" : "") + " /> Claude API 키 " +
+      '<small class="' + (hasClaude ? "key-ok" : "key-none") + '">(서버 설정 · ' + (hasClaude ? "설정됨" : "없음") + ")</small></label>" +
+      '<label class="ed-check"><input type="radio" name="ai-provider" value="baze"' + (provider === "baze" ? " checked" : "") + " /> BAZE API 키 " +
+      '<small class="' + (bazeKey || (health && health.baze) ? "key-ok" : "key-none") + '">(' + (bazeKey ? "저장됨" : health && health.baze ? "서버 설정됨" : "없음") + ")</small></label>" +
+      "</div>" +
+      '<div class="baze-key-box"' + (provider === "baze" ? "" : " hidden") + ">" +
+      '<label class="ed-field"><span>BAZE API 키 (고려대학교 API Gateway)</span>' +
+      '<input type="password" class="baze-key" autocomplete="off" spellcheck="false" placeholder="' + (bazeKey ? "저장된 키가 있습니다 · 바꾸려면 새 키 입력" : "BAZE에서 발급받은 API 키") + '" /></label>' +
+      '<div class="ad-actions">' +
+      '<button class="btn btn-ghost btn-sm baze-save" type="button">키 저장</button>' +
+      (bazeKey ? '<button class="btn btn-ghost btn-sm danger baze-clear" type="button">저장된 키 지우기</button>' : "") +
+      '<a class="baze-docs" href="https://docs.factchat.kr/docs/korea-seoul/api-gateway/getting-started/overview#api-gateway" target="_blank" rel="noopener">BAZE 개발자 문서 ↗</a>' +
+      "</div>" +
+      '<p class="small-note">키는 이 브라우저에만 저장되고, 문제를 만들 때만 퀴즈 서버(server.py)로 보내집니다.</p>' +
+      "</div></div>" +
       (aiOn
-        ? '<p class="small-note">Claude가 주제에 맞는 4지선다 문제를 만들어 목록 끝에 붙입니다. 만든 뒤 꼭 검토하세요.</p>'
-        : '<p class="small-note">서버에 Claude API 키가 없어 <b>프롬프트 복사</b> 방식으로 만듭니다. 복사한 프롬프트를 Claude나 ChatGPT에 붙여 넣고, 받은 답을 아래 칸에 붙여 넣으세요.</p>') +
+        ? '<p class="small-note">' + (provider === "baze" ? "BAZE" : "Claude API") + "로 주제에 맞는 4지선다 문제를 만들어 목록 끝에 붙입니다. 만든 뒤 꼭 검토하세요.</p>"
+        : provider === "baze"
+          ? '<p class="small-note">BAZE API 키를 저장하면 바로 AI로 만들 수 있습니다. 키가 없으면 아래 <b>프롬프트 복사</b> 방식을 쓰세요.</p>'
+          : '<p class="small-note">서버에 Claude API 키가 없어 <b>프롬프트 복사</b> 방식으로 만듭니다. 복사한 프롬프트를 Claude나 ChatGPT에 붙여 넣고, 받은 답을 아래 칸에 붙여 넣으세요. BAZE API 키가 있으면 위에서 BAZE를 고르세요.</p>') +
       '<label class="ed-field"><span>커리큘럼에서 고르기</span><select class="ai-week"><option value="">직접 입력</option>' + weekOptions() + "</select></label>" +
       '<label class="ed-field"><span>주제</span><input class="ai-topic" placeholder="예: 동태조사 了와 过 구분" /></label>' +
       '<div class="qz-ai-row">' +
@@ -5553,6 +5592,21 @@ window.SiteStore = (function () {
       '<p class="form-msg ai-msg" aria-live="polite"></p>' +
       "</section>"
     );
+  }
+
+  function refreshAiPanel(msgText, msgType) {
+    var side = H.root.querySelector(".qz-build-side");
+    var keep = {};
+    [".ai-week", ".ai-topic", ".ai-level", ".ai-count", ".ai-time", ".ai-extra"].forEach(function (sel) {
+      var el = side.querySelector(sel);
+      if (el) keep[sel] = el.value;
+    });
+    side.innerHTML = aiPanel();
+    Object.keys(keep).forEach(function (sel) {
+      var el = side.querySelector(sel);
+      if (el) el.value = keep[sel];
+    });
+    if (msgText) setMsg(side.querySelector(".ai-msg"), msgText, msgType);
   }
 
   function openBuilder() {
@@ -5617,6 +5671,10 @@ window.SiteStore = (function () {
       var el = e.target;
       if (el.getAttribute("data-k") === "answer" || el.getAttribute("data-k") === "time") el.dispatchEvent(new Event("input", { bubbles: true }));
       if (el.classList.contains("ai-week") && el.value) root.querySelector(".ai-topic").value = el.value;
+      if (el.name === "ai-provider") {
+        S.prefSet("aiProvider", el.value);
+        return refreshAiPanel();
+      }
       if (el.classList.contains("qz-set-pick") && el.value !== "") {
         var set = S.prefGet("quizSets", [])[Number(el.value)];
         if (set && confirm("‘" + set.title + "’을(를) 불러올까요? 지금 편집 중인 문제는 바뀝니다.")) {
@@ -5680,6 +5738,18 @@ window.SiteStore = (function () {
         saveDraft();
         return renderBuilder();
       }
+      if (t.closest(".baze-save")) {
+        var v = H.root.querySelector(".baze-key").value.trim();
+        if (!v) return setMsg(H.root.querySelector(".ai-msg"), "BAZE API 키를 입력해 주세요.", "error");
+        S.prefSet("bazeKey", v);
+        S.prefSet("aiProvider", "baze");
+        return refreshAiPanel("BAZE API 키를 저장했습니다. 이제 AI로 만들기를 누르면 BAZE로 문제를 만듭니다.", "ok");
+      }
+      if (t.closest(".baze-clear")) {
+        if (!confirm("이 브라우저에 저장된 BAZE API 키를 지울까요?")) return;
+        S.prefSet("bazeKey", "");
+        return refreshAiPanel("저장된 BAZE API 키를 지웠습니다.", "ok");
+      }
       if (t.closest(".ai-go")) return aiGenerate();
       if (t.closest(".ai-copy")) return copyPrompt();
       if (t.closest(".ai-import")) return importPasted();
@@ -5726,10 +5796,11 @@ window.SiteStore = (function () {
     if (!inp.topic) return setMsg(msg, "주제를 입력하거나 커리큘럼에서 골라 주세요.", "error");
     var btn = H.root.querySelector(".ai-go");
     btn.disabled = true;
-    btn.textContent = "Claude가 문제를 만드는 중… (10~40초)";
+    btn.textContent = (currentProvider() === "baze" ? "BAZE" : "Claude") + "로 문제를 만드는 중… (10~40초)";
     setMsg(msg, "", "");
     api("POST", "/api/ai/questions", {
       topic: inp.topic, level: inp.level, count: inp.count, time: inp.time, extra: inp.extra, password: ss(PASS_KEY) || "",
+      provider: currentProvider(), bazeKey: currentProvider() === "baze" ? S.prefGet("bazeKey", "") : "",
     }).then(function (d) {
       var n = addQuestions(d.questions, inp.time);
       renderBuilder(true);
