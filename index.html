@@ -1812,6 +1812,11 @@ a { color: var(--green-700); }
 .site-footer { background: linear-gradient(180deg, var(--green-800), var(--green-900)); color: #e6efe9; }
 .site-footer h2 { color: #fff; }
 .site-footer h2 small, .profile-bio, .footer-bottom { color: #c4d6cc; }
+.footer-bottom p { margin: 0; line-height: 1.8; }
+.footer-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 4px; }
+.footer-links a { color: #fff; font-weight: 700; text-decoration: none; border-bottom: 1px solid rgba(255, 255, 255, 0.4); }
+.footer-links a:hover { border-bottom-color: #fff; }
+@media (max-width: 600px) { .footer-sep { display: none; } .footer-links { flex-direction: column; gap: 2px; } }
 .footer-eyebrow, .site-footer .profile-aff, .footer-contacts dt { color: #a9d1c0; }
 .ad-head, .qz .qz-bar { background: linear-gradient(180deg, var(--green-700), var(--green-800)); }
 .ad-site, .qz-me { color: #a9d1c0; }
@@ -1925,7 +1930,7 @@ window.SITE_CONFIG = {
     semester: "2026학년도 1학기",
     // 사이트 버전 — 제목 오른쪽에 빨간 글씨로 표시됩니다.
     // 관리자 화면에서 저장할 때마다 마지막 자리가 1씩 자동으로 올라갑니다 (v1.0.0 → v1.0.1).
-    version: "v1.0.2",
+    version: "v1.0.3",
     logoText: "中",
   },
 
@@ -2298,7 +2303,12 @@ window.SITE_CONFIG = {
 
   /* 맨 아래 한 줄 */
   footer: {
-    text: "고려대학교 중어중문학과 · 교양중국어2",
+    copyright: "Copyright 2026 ⓒ AI WEB, All Rights Reserved. | 박정원(한국외국어대학교)",
+    /* 둘째 줄 링크 — url을 바꾸면 눌렀을 때 그 주소로 이동합니다 */
+    links: [
+      { icon: "✉️", label: "AI 뉴스레터 빌더", text: "www.kletter.kr", url: "https://www.kletter.kr" },
+      { icon: "🎓", label: "AI 강의콘텐츠 빌더", text: "www.kteacher.kr", url: "https://www.kteacher.kr" },
+    ],
   },
 
   /* 관리자 — 비밀번호 자체는 저장하지 않고, salt + 비밀번호의 SHA-256 해시값만 둡니다.
@@ -2955,7 +2965,21 @@ window.SiteStore = (function () {
       return "<div><dt>" + esc(c.label) + "</dt><dd>" + v + "</dd></div>";
     }) +
     "</dl></div>" +
-    '<p class="footer-bottom">' + esc(C.footer.text) + " · " + esc(C.site.semester) + "</p>" +
+    '<div class="footer-bottom">' +
+    "<p>" + esc(C.footer.copyright) + "</p>" +
+    (C.footer.links && C.footer.links.length
+      ? '<p class="footer-links">' +
+        C.footer.links
+          .map(function (l) {
+            return (
+              '<span><span aria-hidden="true">' + esc(l.icon) + "</span> " + esc(l.label) + ": " +
+              '<a href="' + esc(l.url) + '" target="_blank" rel="noopener">' + esc(l.text || l.url) + "</a></span>"
+            );
+          })
+          .join('<span class="footer-sep" aria-hidden="true"> · </span>') +
+        "</p>"
+      : "") +
+    "</div>" +
     "</div>";
 
   /* 장점 슬라이드 동작 */
@@ -4017,7 +4041,7 @@ window.SiteStore = (function () {
     grading: "평가 비율", percent: "비율 (%)", notes: "유의 사항", faq: "FAQ", q: "질문", a: "답변", popup: "안내 팝업",
     enabled: "사용", delay: "표시 지연 (밀리초)", points: "안내 항목", cta: "버튼", welcome: "첫 방문 환영", message: "환영 문구",
     instructor: "교수자", position: "직위", affiliation: "소속", photo: "사진 파일 경로", bio: "소개", contacts: "연락처",
-    footer: "푸터", nav: "상단 메뉴",
+    footer: "푸터", nav: "상단 메뉴", copyright: "저작권 문구", links: "링크", url: "주소",
     quiz: "실시간 퀴즈", hostText: "교수자 안내 문구", defaultTime: "기본 제한 시간 (초)", sample: "처음 열 때 예시 퀴즈",
     questions: "문제", choices: "보기", answer: "정답 번호 (0부터)", explanation: "해설",
   };
