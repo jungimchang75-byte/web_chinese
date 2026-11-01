@@ -1905,6 +1905,168 @@ a { color: var(--green-700); }
 
 .done-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
 
+/* ===== AI 생성 중 「삽질」 애니메이션 ===== */
+.ai-dig { display: flex; align-items: center; gap: 14px; padding: 10px 14px; border-radius: 14px; background: var(--surface, #fff); box-shadow: var(--raise, 0 4px 12px rgba(0,0,0,.08)); }
+.dig-scene { position: relative; flex: none; width: 150px; height: 100px; overflow: hidden; border-radius: 10px; }
+.dig-sky { position: absolute; inset: 0; background: linear-gradient(180deg, #e2f0f6, #f6f2ea); }
+.dig-ground { position: absolute; left: 0; right: 0; bottom: 0; height: 24px; background: #9b6a3c; box-shadow: inset 0 3px 0 #7c9a4c; }
+.dig-hole { position: absolute; left: 46px; bottom: 6px; width: 36px; height: 12px; border-radius: 50%; background: #4a3020; animation: digHole 4s ease-in-out infinite; }
+.dig-mound { position: absolute; right: 12px; bottom: 20px; width: 34px; height: 10px; border-radius: 50% 50% 0 0; background: #8a5a2b; transform-origin: bottom; animation: digMound 4s ease-in-out infinite; }
+.dig-shovel { position: absolute; left: 34px; bottom: 12px; width: 62px; height: 62px; transform-origin: 32px 6px; animation: digShovel 1.2s ease-in-out infinite; }
+.dig-dirt { position: absolute; left: 64px; bottom: 28px; width: 7px; height: 7px; border-radius: 50%; background: #7a4e28; opacity: 0; animation: digDirt 1.2s ease-out infinite; }
+.dig-dirt.d2 { width: 5px; height: 5px; animation-delay: 0.08s; --dx: 44px; --dy: -34px; }
+.dig-dirt.d3 { width: 6px; height: 6px; animation-delay: 0.14s; --dx: 30px; --dy: -46px; }
+.dig-dirt.d4 { width: 4px; height: 4px; animation-delay: 0.2s; --dx: 52px; --dy: -24px; }
+@keyframes digShovel {
+  0% { transform: rotate(25deg) translateY(0); }
+  35% { transform: rotate(10deg) translateY(10px); }
+  55% { transform: rotate(-35deg) translateY(-4px); }
+  100% { transform: rotate(25deg) translateY(0); }
+}
+@keyframes digDirt {
+  0%, 50% { opacity: 0; transform: translate(0, 0); }
+  55% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--dx, 38px), var(--dy, -40px)) translateY(30px); }
+}
+@keyframes digMound { 0% { transform: scaleY(0.6); } 100% { transform: scaleY(1.8); } }
+@keyframes digHole { 0% { transform: scale(0.7); } 100% { transform: scale(1.15); } }
+.dig-info p { margin: 0; }
+.dig-text { font-weight: 800; color: var(--green-800, #1d4f45); }
+.dig-sub { font-size: 13px; color: var(--text-soft, #666); }
+@media (prefers-reduced-motion: reduce) { .ai-dig * { animation-duration: 3s !important; } }
+
+/* ===== 주차 학습 자료 ===== */
+.week-ai:empty { display: none; }
+.wa { margin-top: 22px; padding-top: 18px; border-top: 2px dashed var(--line, #e2dacb); display: grid; gap: 14px; }
+.wa-title { margin: 0; font-family: "Noto Serif KR", serif; font-size: 18px; color: var(--green-800, #1d4f45); }
+.wa-empty { margin: 0; padding: 14px; border-radius: 12px; text-align: center; color: var(--text-soft); background: var(--cream-100, #efe9df); }
+.wa-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.wa-tabs button { min-height: 36px; padding: 0 12px; border: 0; border-radius: 999px; font: inherit; font-size: 14px; font-weight: 700; color: var(--green-700, #1f5547); background: var(--surface); box-shadow: var(--raise, var(--shadow)); cursor: pointer; }
+.wa-tabs button.is-on { color: #fff; background: var(--green-700, #1f5547); }
+.wa-body h5 { margin: 4px 0 8px; font-size: 16px; color: var(--green-800, #1d4f45); }
+.wa-body h6 { margin: 14px 0 6px; font-size: 14px; color: var(--green-700, #1f5547); }
+.wa-grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.wa-lead { margin: 0 0 6px; color: var(--text-soft); }
+.wa-notes ul, .wa-notes ol, .wa-assign ol { margin: 0; padding-left: 20px; }
+.wa-notes li, .wa-assign li { margin: 3px 0; }
+.wa-expr { list-style: none; padding: 0 !important; display: grid; gap: 6px; }
+.wa-expr li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.wa-expr span[lang] { font-size: 17px; font-weight: 700; }
+.wa-expr small { color: var(--text-soft); }
+
+/* 문장 50개 */
+.wa-sent-bar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 8px; }
+.wa-filter { display: flex; flex-wrap: wrap; gap: 4px; }
+.wa-filter button { min-height: 32px; padding: 0 10px; border: 1px solid var(--line, #e2dacb); border-radius: 999px; font: inherit; font-size: 13px; background: var(--surface); cursor: pointer; }
+.wa-filter button.is-on { color: #fff; background: var(--green-500, #3b7a68); border-color: transparent; }
+.wa-sent-opts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.wa-rate { min-height: 34px; border: 1px solid var(--line, #e2dacb); border-radius: 10px; font: inherit; background: var(--surface); }
+.wa-sent-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; max-height: 520px; overflow-y: auto; padding-right: 4px; }
+.wa-s { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; background: var(--surface); box-shadow: var(--raise, var(--shadow)); transition: background 0.2s; }
+.wa-s.is-speaking { background: var(--green-100, #e2ece5); outline: 2px solid var(--green-500, #3b7a68); }
+.wa-say { flex: none; width: 36px; height: 36px; border: 0; border-radius: 50%; font-size: 16px; background: var(--cream-100, #efe9df); box-shadow: var(--press, none); cursor: pointer; }
+.wa-say:hover { background: var(--green-100, #e2ece5); }
+.wa-s-body p { margin: 0; }
+.wa-zh { font-size: 18px; font-weight: 700; line-height: 1.5; }
+.wa-num { flex: none; min-width: 34px; height: 34px; padding: 0 6px; border-radius: 10px; display: grid; place-items: center; font-weight: 800; font-size: 14px; color: #fff; background: var(--green-700, #1f5547); font-variant-numeric: tabular-nums; }
+.wa-s.is-speaking .wa-num { background: #b5573f; }
+.wa-py { font-size: 14px; color: var(--green-700, #1f5547); }
+.wa-ko { font-size: 14px; color: var(--text-soft); }
+.wa-ko small { opacity: 0.8; }
+.hide-py .wa-py, .hide-ko .wa-ko { display: none; }
+
+/* 이미지 · 유튜브 */
+.wa-img { margin: 0; border-radius: 14px; overflow: hidden; aspect-ratio: 16 / 9; background: var(--cream-200, #e7e0d3); box-shadow: var(--raise, var(--shadow)); }
+.wa-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.wa-yt { position: relative; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; background: #000; box-shadow: var(--raise, var(--shadow)); }
+.wa-yt iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+
+/* 온라인 퀴즈 */
+.wa-oq { display: grid; gap: 10px; }
+.wa-q { margin: 0; padding: 12px 14px; border: 1px solid transparent; border-radius: 12px; background: var(--surface); box-shadow: var(--raise, var(--shadow)); display: grid; gap: 6px; }
+.wa-q legend { padding: 0; font-weight: 700; }
+.wa-q.is-right { border-color: #6c8f4e; background: #eef3e6; }
+.wa-q.is-wrong { border-color: #d39b88; background: #fbefea; }
+.wa-fb { margin: 0; font-size: 14px; color: var(--text-soft); }
+.wa-ox { display: flex; gap: 10px; }
+.wa-ox label { display: inline-flex; align-items: center; gap: 6px; padding: 6px 16px; border-radius: 12px; background: var(--cream-100, #efe9df); cursor: pointer; font-size: 18px; font-weight: 800; }
+.wa-blank { width: 3.4em; margin: 0 4px; padding: 2px 6px; border: 0; border-bottom: 2px solid var(--green-500, #3b7a68); font: inherit; font-size: 18px; text-align: center; background: var(--cream-50, #fff); }
+.wa-order-ans, .wa-order-pool { display: flex; flex-wrap: wrap; gap: 6px; min-height: 40px; padding: 6px; border-radius: 10px; }
+.wa-order-ans { background: var(--cream-100, #efe9df); box-shadow: var(--press, none); }
+.wa-tok { min-height: 34px; padding: 0 12px; border: 0; border-radius: 10px; font: inherit; font-size: 17px; font-weight: 700; color: #fff; background: var(--green-500, #3b7a68); cursor: pointer; }
+.wa-order-ans .wa-tok { background: var(--green-800, #1d4f45); }
+.wa-score { font-weight: 800; color: var(--green-700, #1f5547); align-self: center; }
+
+/* 실시간 퀴즈 미리보기 */
+.wa-lq ol { margin: 0 0 10px; padding-left: 20px; display: grid; gap: 8px; }
+.wa-lq-ch { margin: 4px 0 0; padding-left: 16px; font-size: 14px; color: var(--text-soft); }
+.wa-lq-ch .is-ans { color: var(--green-700, #1f5547); font-weight: 700; }
+.wa-lq-ch .is-ans::after { content: " ✓"; }
+
+/* 문화 슬라이드 (모션 그래픽) */
+.cs { position: relative; border-radius: 18px; overflow: hidden; box-shadow: var(--raise, var(--shadow)); outline: none; }
+.cs-stage { position: relative; aspect-ratio: 16 / 9; }
+.cs-slide { position: absolute; inset: 0; display: flex; align-items: center; gap: 4%; padding: 5% 7%; color: #fff; opacity: 0; visibility: hidden; transition: opacity 0.6s, visibility 0.6s; overflow: hidden; }
+.cs-slide.on { opacity: 1; visibility: visible; }
+.cs-emoji { flex: none; font-size: clamp(56px, 11vw, 120px); line-height: 1; filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.25)); }
+.cs-text { min-width: 0; }
+.cs-no { margin: 0 0 4px; font-size: 13px; opacity: 0.75; letter-spacing: 1px; }
+.cs-text h5 { margin: 0 0 8px; font-family: "Noto Serif KR", serif; font-size: clamp(18px, 3vw, 30px); color: #fff; }
+.cs-text p { margin: 0; font-size: clamp(13px, 1.7vw, 17px); line-height: 1.6; }
+.cs-key { display: inline-block; margin-top: 10px !important; padding: 4px 12px; border-radius: 999px; background: rgba(255, 255, 255, 0.2); font-weight: 700; }
+.cs-deco { position: absolute; border-radius: 50%; background: rgba(255, 255, 255, 0.12); pointer-events: none; }
+.cs-deco.d1 { width: 46%; aspect-ratio: 1; right: -10%; top: -20%; }
+.cs-deco.d2 { width: 26%; aspect-ratio: 1; left: -6%; bottom: -14%; }
+.cs-slide.on .cs-deco.d1 { animation: csFloat 6s ease-in-out infinite; }
+.cs-slide.on .cs-deco.d2 { animation: csFloat 7s ease-in-out infinite reverse; }
+.cs-slide.on .cs-text h5 { animation: csIn 0.8s 0.15s both; }
+.cs-slide.on .cs-text p { animation: csUp 0.8s 0.35s both; }
+.cs-slide.on .cs-key { animation: csPop 0.6s 0.8s both; }
+.cs-slide.fx0.on .cs-emoji { animation: csZoom 0.9s both, csBob 3s 0.9s ease-in-out infinite; }
+.cs-slide.fx1.on .cs-emoji { animation: csSpin 1s both, csBob 3s 1s ease-in-out infinite; }
+.cs-slide.fx2.on .cs-emoji { animation: csDrop 0.9s both, csBob 3s 0.9s ease-in-out infinite; }
+.cs-slide.fx3.on .cs-emoji { animation: csSlide 0.9s both, csBob 3s 0.9s ease-in-out infinite; }
+.cs-slide.fx4.on .cs-emoji { animation: csFlip 1s both, csBob 3s 1s ease-in-out infinite; }
+@keyframes csIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: none; } }
+@keyframes csUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
+@keyframes csPop { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: none; } }
+@keyframes csZoom { from { opacity: 0; transform: scale(0.3); } to { opacity: 1; transform: none; } }
+@keyframes csSpin { from { opacity: 0; transform: rotate(-200deg) scale(0.4); } to { opacity: 1; transform: none; } }
+@keyframes csDrop { from { opacity: 0; transform: translateY(-120%); } 70% { transform: translateY(6%); } to { opacity: 1; transform: none; } }
+@keyframes csSlide { from { opacity: 0; transform: translateX(-120%); } to { opacity: 1; transform: none; } }
+@keyframes csFlip { from { opacity: 0; transform: perspective(400px) rotateY(90deg); } to { opacity: 1; transform: none; } }
+@keyframes csBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes csFloat { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-12px, 14px); } }
+.cs-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(255, 255, 255, 0.25); }
+.cs-bar span { display: block; height: 100%; width: 0; background: #fff; }
+.cs-ctrl { position: absolute; right: 12px; bottom: 12px; display: flex; gap: 6px; }
+.cs-ctrl button { width: 36px; height: 36px; border: 0; border-radius: 50%; font-size: 16px; color: #fff; background: rgba(0, 0, 0, 0.3); cursor: pointer; }
+.cs-ctrl button:hover { background: rgba(0, 0, 0, 0.5); }
+@media (prefers-reduced-motion: reduce) { .cs-slide.on * { animation: none !important; } }
+
+/* 관리자 도구 */
+.wa-admin { display: grid; gap: 10px; padding: 14px; border-radius: 14px; border: 1px dashed var(--green-500, #3b7a68); background: var(--green-100, #e2ece5); }
+.wa-admin-title { margin: 0; font-weight: 800; color: var(--green-800, #1d4f45); }
+.wa-admin-title small { font-weight: 500; color: var(--text-soft); }
+.wa-gen { display: flex; flex-wrap: wrap; gap: 6px; }
+.wa-files { display: grid; gap: 6px; padding: 10px 12px; border-radius: 12px; background: var(--surface); }
+.wa-files-title { margin: 0; font-weight: 700; font-size: 14px; }
+.wa-files-title small { font-weight: 400; color: var(--text-soft); }
+.wa-file-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 14px; }
+.wa-file-list small { color: var(--text-soft); }
+.wa-files .file-btn { justify-self: start; }
+.wa-yt-edit summary { cursor: pointer; font-weight: 700; color: var(--green-700, #1f5547); }
+.wa-yt-edit[open] { display: grid; gap: 8px; }
+.wa-admin .form-msg { margin: 0 !important; }
+
+@media (max-width: 600px) {
+  .wa-grid2 { grid-template-columns: 1fr; }
+  .cs-slide { flex-direction: column; justify-content: center; text-align: center; padding: 6% 6% 10%; gap: 2%; }
+  .cs-emoji { font-size: 52px; }
+  .cs-text p { font-size: 12px; }
+  .cs-ctrl button { width: 30px; height: 30px; }
+}
+
 /* 제목 앞 이모지 */
 .title-emoji {
   display: inline-block;
@@ -1983,6 +2145,7 @@ a { color: var(--green-700); }
 
   <button class="to-top" type="button" aria-label="맨 위로 이동">↑</button>
 
+<script src="weeks/content.js"></script>
 <script>
 /* ===== config ===== */
 /* CONFIG-START */
@@ -2001,7 +2164,7 @@ window.SITE_CONFIG = {
     semester: "2026학년도 1학기",
     // 사이트 버전 — 제목 오른쪽에 빨간 글씨로 표시됩니다.
     // 관리자 화면에서 저장할 때마다 마지막 자리가 1씩 자동으로 올라갑니다 (v1.0.0 → v1.0.1).
-    version: "v1.2.0",
+    version: "v1.3.2",
     logoText: "漢",
   },
 
@@ -2665,6 +2828,11 @@ window.SiteStore = (function () {
       w._date = d;
       w._time = w.time || cur.defaultTime;
       w._place = w.place || cur.defaultPlace;
+      /* 주차 학습 자료에서 AI로 만든 과제가 있으면 그 과제를 씀 */
+      var wcA = window.WEEK_CONTENT && window.WEEK_CONTENT[String(w.week)] && window.WEEK_CONTENT[String(w.week)].assignment;
+      if (wcA && wcA.title) {
+        w.assignment = { title: wcA.title, desc: wcA.desc, due: (w.assignment || {}).due, submitUrl: (w.assignment || {}).submitUrl };
+      }
       classByDate[dateKey(d)] = w;
       if (w.assignment) {
         var a = w.assignment;
@@ -2822,6 +2990,7 @@ window.SiteStore = (function () {
               "</ul>"
             : "") +
           (a ? assignmentHTML(a) : "") +
+          (w.week <= 15 ? '<div class="week-ai" data-week="' + esc(w.week) + '"></div>' : "") +
           "</div></details>"
         );
       }) +
@@ -5978,15 +6147,18 @@ window.SiteStore = (function () {
     btn.disabled = true;
     btn.textContent = (currentProvider() === "baze" ? "BAZE" : "Claude") + "로 문제를 만드는 중… (10~40초)";
     setMsg(msg, "", "");
+    var dig = window.SiteDig ? window.SiteDig.start(H.root.querySelector(".qz-ai"), inp.count + "문항 만드는 중 · 10~40초 걸립니다") : { stop: function () {} };
     api("POST", "/api/ai/questions", {
       topic: inp.topic, level: inp.level, count: inp.count, time: inp.time, extra: inp.extra, password: ss(PASS_KEY) || "",
       provider: currentProvider(), bazeKey: currentProvider() === "baze" ? S.prefGet("bazeKey", "") : "",
     }).then(function (d) {
+      dig.stop();
       var n = addQuestions(d.questions, inp.time);
       renderBuilder(true);
       H.root.querySelector(".qz-build-main").scrollTop = 1e6;
       setMsg(H.root.querySelector(".ai-msg"), n + "문제를 목록 끝에 추가했습니다. 정답과 내용을 검토해 주세요.", "ok");
     }, function (err) {
+      dig.stop();
       btn.disabled = false;
       btn.textContent = "AI로 만들기";
       setMsg(msg, err.message, "error");
@@ -6349,6 +6521,674 @@ window.SiteStore = (function () {
     }, function (err) {
       if (msg) msg.textContent = err.message;
     });
+  }
+})();
+</script>
+<script>
+/* ===== weeks ===== */
+/* 주차 학습 자료: 강의 노트 · 과제 · 중국어 문장 50개(TTS·병음·번역) · 이미지 · 온라인 퀴즈 · 실시간 퀴즈 · 문화 슬라이드 · 유튜브
+   자료는 weeks/content.js 에 저장되고, 관리자는 주차마다 AI 생성 버튼으로 만듭니다 (퀴즈 서버 필요). */
+(function () {
+  "use strict";
+
+  var C = window.SITE_CONFIG;
+  var U = window.SiteUtil;
+  var S = window.SiteStore;
+  if (!C || !U || !S) return;
+
+  var esc = U.esc;
+  var list = U.list;
+  var WC = (window.WEEK_CONTENT = window.WEEK_CONTENT || {});
+
+  /* AI가 만드는 동안 보여 줄 「삽질」 애니메이션: SiteDig.start(넣을 곳, 글) → { update(글), stop() } */
+  var SHOVEL_SVG =
+    '<svg class="dig-shovel" viewBox="0 0 64 64" aria-hidden="true">' +
+    '<rect x="29" y="2" width="6" height="34" rx="3" fill="#8a5a2b"/>' +
+    '<rect x="23" y="2" width="18" height="6" rx="3" fill="#6b4422"/>' +
+    '<path d="M22 36h20v8c0 8-5 16-10 18-5-2-10-10-10-18z" fill="#9aa5a0" stroke="#5e6b66" stroke-width="2"/>' +
+    "</svg>";
+  window.SiteDig = {
+    start: function (host, text) {
+      if (!host) return { update: function () {}, stop: function () {} };
+      var old = host.querySelector(".ai-dig");
+      if (old) old.remove();
+      var el = document.createElement("div");
+      el.className = "ai-dig";
+      el.setAttribute("role", "status");
+      el.innerHTML =
+        '<div class="dig-scene" aria-hidden="true">' +
+        '<span class="dig-sky"></span>' + SHOVEL_SVG +
+        '<span class="dig-dirt d1"></span><span class="dig-dirt d2"></span><span class="dig-dirt d3"></span><span class="dig-dirt d4"></span>' +
+        '<span class="dig-mound"></span><span class="dig-hole"></span><span class="dig-ground"></span>' +
+        "</div>" +
+        '<div class="dig-info"><p class="dig-text"></p><p class="dig-sub">AI가 열심히 삽질하는 중… <span class="dig-sec">0</span>초</p></div>';
+      host.appendChild(el);
+      var t0 = Date.now();
+      var timer = setInterval(function () { el.querySelector(".dig-sec").textContent = Math.round((Date.now() - t0) / 1000); }, 500);
+      el.querySelector(".dig-text").textContent = text || "";
+      return {
+        update: function (tx) { el.querySelector(".dig-text").textContent = tx; },
+        stop: function () { clearInterval(timer); el.remove(); },
+      };
+    },
+  };
+  var MAX_WEEK = 15;
+  var health = null;
+  var KINDS = [
+    { kind: "notes", field: "notes", label: "📝 강의 노트" },
+    { kind: "assignment", field: "assignment", label: "📌 과제" },
+    { kind: "sentences", field: "sentences", label: "🗣️ 문장 50개" },
+    { kind: "images", field: "images", label: "🖼️ 이미지 2컷" },
+    { kind: "onlinequiz", field: "onlineQuiz", label: "✅ 온라인 퀴즈" },
+    { kind: "livequiz", field: "liveQuiz", label: "⚡ 실시간 퀴즈" },
+    { kind: "culture", field: "culture", label: "🏮 문화 슬라이드" },
+  ];
+  var TABS = [
+    { id: "notes", label: "📝 강의 노트" },
+    { id: "assignment", label: "📌 과제" },
+    { id: "sentences", label: "🗣️ 문장" },
+    { id: "images", label: "🖼️ 이미지" },
+    { id: "onlineQuiz", label: "✅ 온라인 퀴즈" },
+    { id: "liveQuiz", label: "⚡ 실시간 퀴즈" },
+    { id: "culture", label: "🏮 문화 슬라이드" },
+    { id: "videos", label: "🎬 영상" },
+    { id: "songs", label: "🎵 노래" },
+  ];
+
+  fetch("/api/health", { cache: "no-store" })
+    .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
+    .then(function (h) { health = h; }, function () { health = false; })
+    .then(function () { document.querySelectorAll(".week-ai[data-ready]").forEach(renderPanel); });
+
+  function isAdmin() {
+    try { return sessionStorage.getItem("kc2-admin") === "1"; } catch (e) { return false; }
+  }
+  function weekOf(n) {
+    return C.curriculum.weeks.filter(function (w) { return String(w.week) === String(n); })[0];
+  }
+  function content(n) { return WC[String(n)] || {}; }
+  function has(c, id) {
+    var v = c[id];
+    if (!v) return false;
+    if (Array.isArray(v)) return v.filter(Boolean).length > 0;
+    if (id === "onlineQuiz") return ["mc", "ox", "blank", "order"].some(function (k) { return (v[k] || []).length; });
+    if (id === "liveQuiz") return (v.questions || []).length > 0;
+    if (id === "culture") return (v || []).length > 0;
+    return true;
+  }
+  function pass() {
+    try { return JSON.parse(sessionStorage.getItem("kc2-quiz-pass") || '""'); } catch (e) { return ""; }
+  }
+  function provider() {
+    var saved = S.prefGet("aiProvider", "");
+    if (saved === "claude" || saved === "baze") return saved;
+    return !(health && health.claude) && S.prefGet("bazeKey", "") ? "baze" : "claude";
+  }
+  function post(path, body) {
+    return fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (d) {
+        if (!r.ok) throw new Error(d.error || "서버 오류 (" + r.status + ")");
+        return d;
+      });
+    });
+  }
+
+  /* ---------- 유튜브 ---------- */
+  function ytId(url) {
+    var m = String(url || "").match(/(?:youtu\.be\/|v=|embed\/|shorts\/|live\/)([\w-]{11})/);
+    return m ? m[1] : "";
+  }
+  function ytGrid(urls, kind) {
+    var items = (urls || []).filter(Boolean);
+    if (!items.length) return '<p class="wa-empty">아직 등록된 ' + kind + "이 없습니다.</p>";
+    return (
+      '<div class="wa-grid2">' +
+      list(items, function (u, i) {
+        var id = ytId(u);
+        return id
+          ? '<div class="wa-yt"><iframe src="https://www.youtube-nocookie.com/embed/' + esc(id) + '" title="' + esc(kind + " " + (i + 1)) + '" loading="lazy" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>'
+          : '<p class="wa-empty">유튜브 주소를 읽을 수 없습니다: ' + esc(u) + "</p>";
+      }) +
+      "</div>"
+    );
+  }
+
+  /* ---------- 탭 내용 ---------- */
+  function notesHTML(n) {
+    return (
+      '<div class="wa-notes">' +
+      (n.title ? "<h5>" + esc(n.title) + "</h5>" : "") +
+      (n.summary ? '<p class="wa-lead">' + esc(n.summary) + "</p>" : "") +
+      list(n.sections, function (s) {
+        return '<section><h6>' + esc(s.heading) + "</h6><ul>" + list(s.points, function (p) { return "<li>" + esc(p) + "</li>"; }) + "</ul></section>";
+      }) +
+      ((n.expressions || []).length
+        ? '<h6>핵심 표현</h6><ul class="wa-expr">' + list(n.expressions, function (e) {
+            return '<li><button class="wa-say" type="button" data-say="' + esc(e.zh) + '" aria-label="듣기">🔊</button><span lang="zh-CN">' + esc(e.zh) + '</span><small>' + esc(e.pinyin) + " · " + esc(e.ko) + "</small></li>";
+          }) + "</ul>"
+        : "") +
+      ((n.questions || []).length ? '<h6>확인 질문</h6><ol>' + list(n.questions, function (q) { return "<li>" + esc(q) + "</li>"; }) + "</ol>" : "") +
+      "</div>"
+    );
+  }
+  function assignmentTab(a) {
+    return (
+      '<div class="wa-assign"><h5>' + esc(a.title) + "</h5><p>" + esc(a.desc) + "</p>" +
+      ((a.steps || []).length ? "<ol>" + list(a.steps, function (s) { return "<li>" + esc(s) + "</li>"; }) + "</ol>" : "") +
+      '<p class="small-note">제출은 위쪽 과제 칸의 버튼이나 「내 강의실」에서 합니다.</p></div>'
+    );
+  }
+  function sentencesHTML(arr) {
+    var counts = { 어휘: 0, 문법: 0, 문형: 0 };
+    arr.forEach(function (s) { counts[s.type] = (counts[s.type] || 0) + 1; });
+    return (
+      '<div class="wa-sent">' +
+      '<div class="wa-sent-bar">' +
+      '<div class="wa-filter" role="group" aria-label="문장 종류">' +
+      '<button type="button" class="is-on" data-f="">전체 ' + arr.length + "</button>" +
+      list(["어휘", "문법", "문형"], function (t) { return '<button type="button" data-f="' + t + '">' + t + " " + (counts[t] || 0) + "</button>"; }) +
+      "</div>" +
+      '<div class="wa-sent-opts">' +
+      '<label class="ed-check"><input type="checkbox" class="wa-show-py" checked /> 병음</label>' +
+      '<label class="ed-check"><input type="checkbox" class="wa-show-ko" checked /> 번역</label>' +
+      '<select class="wa-rate" aria-label="읽기 속도"><option value="0.7">느리게</option><option value="0.9" selected>보통</option><option value="1.1">빠르게</option></select>' +
+      '<button type="button" class="btn btn-primary btn-sm wa-play-all">▶ 전체 듣기</button>' +
+      '<button type="button" class="btn btn-ghost btn-sm wa-stop" hidden>■ 멈춤</button>' +
+      "</div></div>" +
+      '<p class="wa-tts-msg small-note" hidden></p>' +
+      '<ol class="wa-sent-list">' +
+      list(arr, function (s, i) {
+        return (
+          '<li class="wa-s" data-type="' + esc(s.type) + '" data-i="' + i + '">' +
+          '<span class="wa-num" aria-label="' + (i + 1) + '번">' + (i < 9 ? "0" : "") + (i + 1) + "</span>" +
+          '<button class="wa-say" type="button" data-say="' + esc(s.zh) + '" aria-label="' + (i + 1) + '번 문장 듣기">🔊</button>' +
+          '<div class="wa-s-body">' +
+          '<p class="wa-zh" lang="zh-CN">' + esc(s.zh) + ' <span class="tag tag-opt">' + esc(s.type) + "</span></p>" +
+          '<p class="wa-py">' + esc(s.pinyin) + "</p>" +
+          '<p class="wa-ko">' + esc(s.ko) + (s.point ? ' <small>· ' + esc(s.point) + "</small>" : "") + "</p>" +
+          "</div></li>"
+        );
+      }) +
+      "</ol></div>"
+    );
+  }
+  function imagesHTML(imgs, w) {
+    return (
+      '<div class="wa-grid2">' +
+      list(imgs, function (im, i) {
+        return '<figure class="wa-img"><img src="' + esc(im.src) + '" alt="' + esc(w.title + " 그림 " + (i + 1)) + '" loading="lazy" /></figure>';
+      }) +
+      "</div>"
+    );
+  }
+  function shuffle(a, seed) {
+    var arr = a.slice();
+    var s = seed || 1;
+    for (var i = arr.length - 1; i > 0; i--) {
+      s = (s * 9301 + 49297) % 233280;
+      var j = Math.floor((s / 233280) * (i + 1));
+      var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+    }
+    if (arr.join("") === a.join("") && arr.length > 1) arr.push(arr.shift());
+    return arr;
+  }
+  function onlineQuizHTML(q, wn) {
+    var n = 0;
+    var html = '<form class="wa-oq" novalidate>';
+    if ((q.mc || []).length) {
+      html += '<h5>객관식</h5>' + list(q.mc, function (m, i) {
+        n++;
+        return '<fieldset class="wa-q" data-t="mc" data-a="' + m.answer + '"><legend>' + n + ". " + esc(m.q) + "</legend>" +
+          list(m.choices, function (c, ci) { return '<label class="choice"><input type="radio" name="mc' + wn + "-" + i + '" value="' + ci + '" /> ' + esc(c) + "</label>"; }) +
+          '<p class="wa-fb" hidden>' + esc(m.explanation) + "</p></fieldset>";
+      });
+    }
+    if ((q.ox || []).length) {
+      html += '<h5>OX</h5>' + list(q.ox, function (o, i) {
+        n++;
+        return '<fieldset class="wa-q" data-t="ox" data-a="' + (o.answer ? "o" : "x") + '"><legend>' + n + ". " + esc(o.q) + "</legend>" +
+          '<div class="wa-ox"><label><input type="radio" name="ox' + wn + "-" + i + '" value="o" /> <span>O</span></label><label><input type="radio" name="ox' + wn + "-" + i + '" value="x" /> <span>X</span></label></div>' +
+          '<p class="wa-fb" hidden>' + esc(o.explanation) + "</p></fieldset>";
+      });
+    }
+    if ((q.blank || []).length) {
+      html += '<h5>빈칸 채우기 <small>(중국어 2글자)</small></h5>' + list(q.blank, function (b) {
+        n++;
+        var parts = String(b.sentence).split(/＿+|_{2,}/);
+        return '<fieldset class="wa-q" data-t="blank" data-a="' + esc(b.answer) + '"><legend>' + n + ". " + esc(b.ko) + "</legend>" +
+          '<p class="wa-zh" lang="zh-CN">' + esc(parts[0] || "") + '<input class="wa-blank" maxlength="4" lang="zh-CN" aria-label="빈칸" />' + esc(parts.slice(1).join("") || "") + "</p>" +
+          '<p class="wa-fb" hidden>정답: <b lang="zh-CN">' + esc(b.answer) + "</b> · " + esc(b.pinyin) + "</p></fieldset>";
+      });
+    }
+    if ((q.order || []).length) {
+      html += '<h5>순서 맞추기</h5>' + list(q.order, function (r, i) {
+        n++;
+        return '<fieldset class="wa-q" data-t="order" data-a="' + esc(r.tokens.join("")) + '"><legend>' + n + ". " + esc(r.ko) + "</legend>" +
+          '<div class="wa-order-ans" lang="zh-CN" aria-label="고른 순서"></div>' +
+          '<div class="wa-order-pool" lang="zh-CN">' + list(shuffle(r.tokens, wn * 31 + i + 7), function (t) { return '<button type="button" class="wa-tok">' + esc(t) + "</button>"; }) + "</div>" +
+          '<p class="wa-fb" hidden>정답: <b lang="zh-CN">' + esc(r.tokens.join(" ")) + "</b></p></fieldset>";
+      });
+    }
+    html += '<div class="ad-actions"><button class="btn btn-primary btn-sm" type="submit">채점하기</button><button class="btn btn-ghost btn-sm wa-oq-reset" type="button">다시 풀기</button><span class="wa-score" aria-live="polite"></span></div></form>';
+    return html;
+  }
+  function liveQuizHTML(lq) {
+    return (
+      '<div class="wa-lq"><ol>' +
+      list(lq.questions, function (q) {
+        return "<li>" + esc(q.q) + '<ul class="wa-lq-ch">' + list(q.choices, function (c, i) { return '<li class="' + (i === q.answer ? "is-ans" : "") + '">' + esc(c) + "</li>"; }) + "</ul></li>";
+      }) +
+      "</ol>" +
+      (isAdmin() ? '<button class="btn btn-primary btn-sm wa-lq-open" type="button">⚡ 이 문제로 실시간 퀴즈 열기</button>' : '<p class="small-note">수업 시간에 교수자가 실시간 퀴즈로 진행합니다.</p>') +
+      "</div>"
+    );
+  }
+  var SLIDE_BG = [
+    "linear-gradient(135deg,#1f5547,#3b7a68)", "linear-gradient(135deg,#b5573f,#d9894f)", "linear-gradient(135deg,#2f6f8c,#4fa3b8)",
+    "linear-gradient(135deg,#6b4a2e,#a8763f)", "linear-gradient(135deg,#5f8a3c,#8db45a)", "linear-gradient(135deg,#7a3e5c,#b0627e)",
+    "linear-gradient(135deg,#25456b,#4f74a3)", "linear-gradient(135deg,#8c6a1f,#c9a23a)", "linear-gradient(135deg,#3d5a40,#6d8f5f)",
+    "linear-gradient(135deg,#7a2e2e,#b0503c)",
+  ];
+  function cultureHTML(slides) {
+    return (
+      '<div class="cs" tabindex="0" aria-roledescription="슬라이드쇼" aria-label="중국 문화 슬라이드">' +
+      '<div class="cs-stage">' +
+      list(slides, function (s, i) {
+        return (
+          '<section class="cs-slide fx' + (i % 5) + (i === 0 ? " on" : "") + '" style="background:' + SLIDE_BG[i % SLIDE_BG.length] + '" aria-hidden="' + (i === 0 ? "false" : "true") + '">' +
+          '<span class="cs-deco d1" aria-hidden="true"></span><span class="cs-deco d2" aria-hidden="true"></span>' +
+          '<span class="cs-emoji" aria-hidden="true">' + esc(s.emoji) + "</span>" +
+          '<div class="cs-text"><p class="cs-no">' + (i + 1) + " / " + slides.length + "</p><h5>" + esc(s.title) + "</h5><p>" + esc(s.text) + "</p>" +
+          (s.keyword ? '<p class="cs-key" lang="zh-CN">' + esc(s.keyword) + "</p>" : "") + "</div></section>"
+        );
+      }) +
+      "</div>" +
+      '<div class="cs-bar"><span></span></div>' +
+      '<div class="cs-ctrl"><button type="button" class="cs-prev" aria-label="이전">‹</button><button type="button" class="cs-play" aria-label="일시 정지">❚❚</button><button type="button" class="cs-next" aria-label="다음">›</button></div>' +
+      "</div>"
+    );
+  }
+
+  /* ---------- 관리자 도구 ---------- */
+  function adminHTML(n, c) {
+    if (!isAdmin()) return "";
+    var noServer = health === false;
+    var files = c.files || [];
+    return (
+      '<div class="wa-admin">' +
+      '<p class="wa-admin-title">🤖 AI로 이 주차 자료 만들기 <small>(관리자만 보임 · 사용할 키: ' + (provider() === "baze" ? "BAZE" : "Claude API") + ")</small></p>" +
+      (noServer
+        ? '<p class="small-note">⚠ 퀴즈 서버에 연결되지 않았습니다. 이 PC에서 <code>python server.py</code>를 켜고 http://localhost:8000 에서 만들어 주세요.</p>'
+        : "") +
+      '<div class="wa-files"><p class="wa-files-title">📎 참고 자료 <small>— 올린 자료는 AI 생성 때 반드시 참고합니다 (PDF, PPTX, DOCX, XLSX, HWPX, HTML, TXT)</small></p>' +
+      (files.length
+        ? '<ul class="wa-file-list">' + list(files, function (f) {
+            return '<li><span class="chip ' + (f.kind === "none" ? "chip-miss" : "chip-ok") + '">' + (f.kind === "pdf" ? "PDF" : f.kind === "text" ? "참고" : "못 읽음") + "</span> " +
+              esc(f.name) + ' <small>' + esc(f.note || "") + '</small> <button class="link-btn wa-file-del" type="button" data-name="' + esc(f.name) + '">삭제</button></li>';
+          }) + "</ul>"
+        : '<p class="small-note">아직 올린 자료가 없습니다.</p>') +
+      '<label class="btn btn-ghost btn-sm file-btn">자료 올리기<input type="file" class="wa-upload" multiple accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.hwp,.hwpx,.html,.htm,.txt,.md,.csv"' + (noServer ? " disabled" : "") + " /></label>" +
+      "</div>" +
+      '<div class="wa-gen">' +
+      list(KINDS, function (k) {
+        return '<button type="button" class="btn btn-ghost btn-sm wa-gen-btn" data-kind="' + k.kind + '"' + (noServer ? " disabled" : "") + ">" + k.label + (has(c, k.field) ? " ↻" : "") + "</button>";
+      }) +
+      '<button type="button" class="btn btn-primary btn-sm wa-gen-all"' + (noServer ? " disabled" : "") + ">✨ 모두 만들기</button>" +
+      "</div>" +
+      '<details class="wa-yt-edit"><summary>🎬 유튜브 영상 · 🎵 노래 주소 넣기</summary>' +
+      '<div class="wa-grid2">' +
+      '<label class="ed-field"><span>영상 1</span><input class="wa-yt-in" data-f="videos" data-i="0" value="' + esc((c.videos || [])[0] || "") + '" placeholder="https://www.youtube.com/watch?v=…" /></label>' +
+      '<label class="ed-field"><span>영상 2</span><input class="wa-yt-in" data-f="videos" data-i="1" value="' + esc((c.videos || [])[1] || "") + '" placeholder="https://youtu.be/…" /></label>' +
+      '<label class="ed-field"><span>노래 1</span><input class="wa-yt-in" data-f="songs" data-i="0" value="' + esc((c.songs || [])[0] || "") + '" placeholder="https://www.youtube.com/watch?v=…" /></label>' +
+      '<label class="ed-field"><span>노래 2</span><input class="wa-yt-in" data-f="songs" data-i="1" value="' + esc((c.songs || [])[1] || "") + '" placeholder="https://youtu.be/…" /></label>' +
+      "</div>" +
+      '<button type="button" class="btn btn-primary btn-sm wa-yt-save"' + (noServer ? " disabled" : "") + ">주소 저장</button></details>" +
+      '<p class="form-msg wa-msg" aria-live="polite"></p>' +
+      "</div>"
+    );
+  }
+
+  /* ---------- 패널 그리기 ---------- */
+  function renderPanel(el) {
+    var n = el.getAttribute("data-week");
+    var w = weekOf(n);
+    var c = content(n);
+    el.setAttribute("data-ready", "1");
+    el._admin = isAdmin();
+    var tabs = TABS.filter(function (t) { return has(c, t.id); });
+    if (!tabs.length && !isAdmin()) {
+      el.innerHTML = "";
+      return;
+    }
+    var cur = el._tab && tabs.some(function (t) { return t.id === el._tab; }) ? el._tab : tabs.length ? tabs[0].id : "";
+    el._tab = cur;
+    el.innerHTML =
+      '<div class="wa">' +
+      '<h4 class="wa-title">📚 주차 학습 자료</h4>' +
+      adminHTML(n, c) +
+      (tabs.length
+        ? '<div class="wa-tabs" role="tablist">' + list(tabs, function (t) {
+            return '<button type="button" role="tab" data-tab="' + t.id + '" aria-selected="' + (t.id === cur) + '" class="' + (t.id === cur ? "is-on" : "") + '">' + t.label + "</button>";
+          }) + "</div>" +
+          '<div class="wa-body">' + tabBody(cur, c, w, n) + "</div>"
+        : '<p class="wa-empty">아직 만든 자료가 없습니다. 위의 버튼으로 만들어 보세요.</p>') +
+      "</div>";
+    if (cur === "culture") startSlides(el.querySelector(".cs"));
+  }
+  function tabBody(id, c, w, n) {
+    if (id === "notes") return notesHTML(c.notes);
+    if (id === "assignment") return assignmentTab(c.assignment);
+    if (id === "sentences") return sentencesHTML(c.sentences);
+    if (id === "images") return imagesHTML(c.images, w);
+    if (id === "onlineQuiz") return onlineQuizHTML(c.onlineQuiz, Number(n));
+    if (id === "liveQuiz") return liveQuizHTML(c.liveQuiz);
+    if (id === "culture") return cultureHTML(c.culture);
+    if (id === "videos") return ytGrid(c.videos, "영상");
+    if (id === "songs") return ytGrid(c.songs, "노래");
+    return "";
+  }
+
+  /* 주차를 펼칠 때 처음 한 번 그림 */
+  var curriculum = document.getElementById("curriculum");
+  curriculum.addEventListener("toggle", function (e) {
+    var d = e.target;
+    if (!d.classList || !d.classList.contains("week-item")) return;
+    var el = d.querySelector(".week-ai");
+    if (!el) return;
+    if (d.open && (!el.getAttribute("data-ready") || el._admin !== isAdmin())) renderPanel(el);
+    if (!d.open) { stopSpeak(); stopSlides(el.querySelector(".cs")); }
+  }, true);
+  /* 관리자로 로그인·로그아웃하면 펼쳐 둔 패널을 다시 그림 */
+  setInterval(function () {
+    document.querySelectorAll(".week-item[open] .week-ai[data-ready]").forEach(function (el) {
+      if (el._admin !== isAdmin()) renderPanel(el);
+    });
+  }, 1500);
+
+  /* ---------- TTS (브라우저 내장 중국어 음성) ---------- */
+  var synth = window.speechSynthesis;
+  var playing = null;
+  function zhVoice() {
+    if (!synth) return null;
+    var vs = synth.getVoices();
+    return vs.filter(function (v) { return /zh[-_]CN/i.test(v.lang); })[0] || vs.filter(function (v) { return /^zh/i.test(v.lang); })[0] || null;
+  }
+  function speak(text, rate, onend) {
+    if (!synth) return false;
+    var u = new SpeechSynthesisUtterance(text);
+    u.lang = "zh-CN";
+    var v = zhVoice();
+    if (v) u.voice = v;
+    u.rate = rate || 0.9;
+    u.onend = onend || null;
+    u.onerror = onend || null;
+    synth.speak(u);
+    return true;
+  }
+  function stopSpeak() {
+    if (synth) synth.cancel();
+    if (playing) {
+      playing.querySelectorAll(".wa-s.is-speaking").forEach(function (li) { li.classList.remove("is-speaking"); });
+      var stop = playing.querySelector(".wa-stop");
+      if (stop) stop.hidden = true;
+      var st = playing.querySelector(".wa-tts-msg");
+      if (st && st.textContent.indexOf("▶") === 0) st.hidden = true;
+    }
+    playing = null;
+  }
+  function ttsWarn(root) {
+    var m = root.querySelector(".wa-tts-msg");
+    if (!m) return;
+    if (!synth) { m.hidden = false; m.textContent = "이 브라우저는 음성 읽기를 지원하지 않습니다."; return; }
+    if (!zhVoice()) { m.hidden = false; m.textContent = "이 기기에 중국어 음성이 없어 기본 음성으로 읽습니다. (Windows: 설정 › 시간 및 언어 › 음성에서 중국어 음성을 추가하면 더 자연스럽습니다)"; }
+  }
+  function playAll(root) {
+    stopSpeak();
+    var items = Array.prototype.filter.call(root.querySelectorAll(".wa-s"), function (li) { return li.style.display !== "none"; });
+    var rate = Number(root.querySelector(".wa-rate").value);
+    var i = 0;
+    playing = root;
+    root.querySelector(".wa-stop").hidden = false;
+    ttsWarn(root);
+    (function next() {
+      if (playing !== root) return;
+      items.forEach(function (li) { li.classList.remove("is-speaking"); });
+      if (i >= items.length) return stopSpeak();
+      var li = items[i++];
+      li.classList.add("is-speaking");
+      var st = root.querySelector(".wa-tts-msg");
+      st.hidden = false;
+      st.textContent = "▶ " + i + " / " + items.length + "번째 문장 듣는 중 (" + (Number(li.getAttribute("data-i")) + 1) + "번)";
+      li.scrollIntoView({ block: "nearest" });
+      speak(li.querySelector(".wa-say").getAttribute("data-say"), rate, function () { setTimeout(next, 350); });
+    })();
+  }
+
+  /* ---------- 문화 슬라이드 ---------- */
+  function showSlide(cs, i) {
+    var slides = cs.querySelectorAll(".cs-slide");
+    cs._i = (i + slides.length) % slides.length;
+    slides.forEach(function (s, k) {
+      s.classList.toggle("on", k === cs._i);
+      s.setAttribute("aria-hidden", String(k !== cs._i));
+    });
+    var bar = cs.querySelector(".cs-bar span");
+    bar.style.transition = "none";
+    bar.style.width = "0%";
+    if (!cs._paused) {
+      void bar.offsetWidth;
+      bar.style.transition = "width 6s linear";
+      bar.style.width = "100%";
+    }
+  }
+  function startSlides(cs) {
+    if (!cs) return;
+    stopSlides(cs);
+    cs._paused = false;
+    showSlide(cs, cs._i || 0);
+    cs._timer = setInterval(function () { if (!cs._paused) showSlide(cs, cs._i + 1); }, 6000);
+  }
+  function stopSlides(cs) {
+    if (cs && cs._timer) clearInterval(cs._timer);
+  }
+
+  /* ---------- 동작 ---------- */
+  curriculum.addEventListener("click", function (e) {
+    var t = e.target;
+    var el = t.closest(".week-ai");
+    if (!el) return;
+    var n = el.getAttribute("data-week");
+    var tab = t.closest(".wa-tabs [data-tab]");
+    if (tab) {
+      stopSpeak();
+      stopSlides(el.querySelector(".cs"));
+      el._tab = tab.getAttribute("data-tab");
+      return renderPanel(el);
+    }
+    var say = t.closest(".wa-say");
+    if (say) {
+      stopSpeak();
+      var root = el.querySelector(".wa-sent");
+      if (root) ttsWarn(root);
+      var rate = root ? Number(root.querySelector(".wa-rate").value) : 0.9;
+      var li = say.closest(".wa-s");
+      if (li) li.classList.add("is-speaking");
+      return speak(say.getAttribute("data-say"), rate, function () { if (li) li.classList.remove("is-speaking"); });
+    }
+    if (t.closest(".wa-play-all")) return playAll(el.querySelector(".wa-sent"));
+    if (t.closest(".wa-stop")) return stopSpeak();
+    var f = t.closest(".wa-filter button");
+    if (f) {
+      el.querySelectorAll(".wa-filter button").forEach(function (b) { b.classList.toggle("is-on", b === f); });
+      var type = f.getAttribute("data-f");
+      el.querySelectorAll(".wa-s").forEach(function (li2) { li2.style.display = !type || li2.getAttribute("data-type") === type ? "" : "none"; });
+      return;
+    }
+    var tok = t.closest(".wa-tok");
+    if (tok) {
+      var q = tok.closest(".wa-q");
+      var target = tok.parentNode.classList.contains("wa-order-pool") ? q.querySelector(".wa-order-ans") : q.querySelector(".wa-order-pool");
+      target.appendChild(tok);
+      return;
+    }
+    if (t.closest(".wa-oq-reset")) return renderPanel(el);
+    var cs = t.closest(".cs");
+    if (cs) {
+      if (t.closest(".cs-prev")) showSlide(cs, cs._i - 1);
+      if (t.closest(".cs-next")) showSlide(cs, cs._i + 1);
+      if (t.closest(".cs-play")) {
+        cs._paused = !cs._paused;
+        var pb = cs.querySelector(".cs-play");
+        pb.textContent = cs._paused ? "▶" : "❚❚";
+        pb.setAttribute("aria-label", cs._paused ? "재생" : "일시 정지");
+        showSlide(cs, cs._i);
+      }
+      return;
+    }
+    if (t.closest(".wa-lq-open")) {
+      var lq = content(n).liveQuiz;
+      var w = weekOf(n);
+      S.prefSet("quizDraft", {
+        title: n + "주차 " + w.title + " 퀴즈",
+        questions: lq.questions.map(function (qq) {
+          var ch = qq.choices.slice(0, 4);
+          while (ch.length < 4) ch.push("");
+          return { q: qq.q, choices: ch, answer: qq.answer, time: qq.time || 20, explanation: qq.explanation || "" };
+        }),
+      });
+      var open = document.querySelector(".quiz-host-open");
+      if (open) { document.getElementById("quiz").scrollIntoView(); open.click(); }
+      return;
+    }
+    var gen = t.closest(".wa-gen-btn");
+    if (gen) return generate(el, [gen.getAttribute("data-kind")]);
+    if (t.closest(".wa-gen-all")) {
+      var kinds = KINDS.map(function (k) { return k.kind; });
+      if (!(S.prefGet("bazeKey", "") || (health && health.baze))) kinds = kinds.filter(function (k) { return k !== "images"; });
+      return generate(el, kinds);
+    }
+    if (t.closest(".wa-yt-save")) return saveYoutube(el);
+    var del = t.closest(".wa-file-del");
+    if (del) {
+      if (!confirm("‘" + del.getAttribute("data-name") + "’ 자료를 지울까요?")) return;
+      return post("/api/week/file-delete", { week: n, name: del.getAttribute("data-name"), password: pass() }).then(function (d) {
+        WC[n] = d.content;
+        renderPanel(el);
+      }, function (err) { msg(el, err.message, "error"); });
+    }
+  });
+  curriculum.addEventListener("change", function (e) {
+    var el = e.target.closest(".week-ai");
+    if (!el) return;
+    if (e.target.classList.contains("wa-show-py")) el.querySelector(".wa-sent").classList.toggle("hide-py", !e.target.checked);
+    if (e.target.classList.contains("wa-show-ko")) el.querySelector(".wa-sent").classList.toggle("hide-ko", !e.target.checked);
+    if (e.target.classList.contains("wa-upload")) upload(el, e.target.files);
+  });
+  curriculum.addEventListener("submit", function (e) {
+    var form = e.target.closest(".wa-oq");
+    if (!form) return;
+    e.preventDefault();
+    var total = 0;
+    var ok = 0;
+    form.querySelectorAll(".wa-q").forEach(function (q) {
+      total++;
+      var t = q.getAttribute("data-t");
+      var a = q.getAttribute("data-a");
+      var v = "";
+      if (t === "mc" || t === "ox") { var c = q.querySelector("input:checked"); v = c ? c.value : ""; }
+      if (t === "blank") v = q.querySelector(".wa-blank").value.replace(/\s/g, "");
+      if (t === "order") v = Array.prototype.map.call(q.querySelectorAll(".wa-order-ans .wa-tok"), function (b) { return b.textContent; }).join("");
+      var right = String(v) === String(a);
+      if (right) ok++;
+      q.classList.toggle("is-right", right);
+      q.classList.toggle("is-wrong", !right);
+      q.querySelector(".wa-fb").hidden = false;
+    });
+    form.querySelector(".wa-score").textContent = "점수: " + ok + " / " + total;
+  });
+
+  function msg(el, text, type) {
+    var m = el.querySelector(".wa-msg");
+    if (!m) return;
+    m.textContent = text;
+    m.classList.toggle("is-error", type === "error");
+    m.classList.toggle("is-ok", type === "ok");
+  }
+  function info(n) {
+    var w = weekOf(n);
+    return { title: w.title, expression: w.expression || "", note: w.note || "", content: w.content || [] };
+  }
+  function savedNote(d) {
+    return d.saved ? " weeks/content.js에 저장했습니다. 「커밋해줘」라고 하시면 사이트에 반영됩니다." : " 이 서버에서는 파일로 저장할 수 없어 지금 화면에만 보입니다. (이 PC의 server.py에서 만들어 주세요)";
+  }
+  function generate(el, kinds) {
+    var n = el.getAttribute("data-week");
+    var labels = {};
+    KINDS.forEach(function (k) { labels[k.kind] = k.label; });
+    el.querySelectorAll(".wa-gen button").forEach(function (b) { b.disabled = true; });
+    var i = 0;
+    var last = null;
+    var errors = [];
+    var dig = window.SiteDig.start(el.querySelector(".wa-admin"), "");
+    (function next() {
+      if (i >= kinds.length) {
+        dig.stop();
+        if (last) { WC[n] = last.content; el._tab = null; }
+        renderPanel(el);
+        if (errors.length) msg(el, "일부를 만들지 못했습니다: " + errors.join(" / "), "error");
+        else if (last) msg(el, "✓ 다 만들었습니다." + savedNote(last), "ok");
+        return;
+      }
+      var k = kinds[i++];
+      msg(el, "", "");
+      dig.update(labels[k] + " 만드는 중 (" + i + "/" + kinds.length + ") · 한 가지에 30초~1분 걸립니다");
+      post("/api/week/generate", { week: n, kind: k, info: info(n), provider: provider(), bazeKey: provider() === "baze" || k === "images" ? S.prefGet("bazeKey", "") : "", password: pass() })
+        .then(function (d) { last = d; WC[n] = d.content; }, function (err) { errors.push(labels[k] + " — " + err.message); })
+        .then(next);
+    })();
+  }
+  function saveYoutube(el) {
+    var n = el.getAttribute("data-week");
+    var patch = { videos: ["", ""], songs: ["", ""] };
+    var bad = [];
+    el.querySelectorAll(".wa-yt-in").forEach(function (inp) {
+      var v = inp.value.trim();
+      if (v && !ytId(v)) bad.push(v);
+      patch[inp.getAttribute("data-f")][Number(inp.getAttribute("data-i"))] = v;
+    });
+    if (bad.length) return msg(el, "유튜브 주소를 확인해 주세요: " + bad.join(", "), "error");
+    patch.videos = patch.videos.filter(Boolean);
+    patch.songs = patch.songs.filter(Boolean);
+    post("/api/week/save", { week: n, patch: patch, password: pass() }).then(function (d) {
+      WC[n] = d.content;
+      renderPanel(el);
+      msg(el, "✓ 유튜브 주소를 저장했습니다." + savedNote(d), "ok");
+    }, function (err) { msg(el, err.message, "error"); });
+  }
+  function upload(el, files) {
+    var n = el.getAttribute("data-week");
+    var arr = Array.prototype.slice.call(files || []);
+    if (!arr.length) return;
+    var i = 0;
+    var notes = [];
+    (function next() {
+      if (i >= arr.length) {
+        renderPanel(el);
+        return msg(el, "📎 " + notes.join(" / "), "ok");
+      }
+      var f = arr[i++];
+      if (f.size > 20 * 1024 * 1024) { notes.push(f.name + ": 20MB 초과"); return next(); }
+      msg(el, "자료를 올리는 중… " + f.name, "");
+      var reader = new FileReader();
+      reader.onload = function () {
+        post("/api/week/upload", { week: n, name: f.name, data: String(reader.result), password: pass() }).then(function (d) {
+          WC[n] = d.content;
+          notes.push(f.name + ": " + d.file.note);
+        }, function (err) { notes.push(f.name + ": " + err.message); }).then(next);
+      };
+      reader.onerror = function () { notes.push(f.name + ": 읽기 실패"); next(); };
+      reader.readAsDataURL(f);
+    })();
   }
 })();
 </script>

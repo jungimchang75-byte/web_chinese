@@ -1,3 +1,5 @@
 .claude/
 __pycache__/
 *.pyc
+# 관리자가 올린 참고 자료 (저작권 보호: GitHub에 올리지 않음)
+weeks/files/

@@ -9,6 +9,7 @@
 
 퀴즈 방과 기록은 서버 메모리에만 있으므로, 끝나면 결과 CSV를 내려받아 두세요.
 """
+import base64
 import json
 import os
 import random
@@ -17,6 +18,7 @@ import socket
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
@@ -326,6 +328,407 @@ def generate_questions(topic, level, count, extra, baze_key=""):
     return parse_questions(resp)
 
 
+# ---------------------------------------------------------------- 주차 학습 자료 (AI 생성 · 저장)
+WEEKS_DIR = os.path.join(ROOT, "weeks")
+WEEKS_JSON = os.path.join(WEEKS_DIR, "content.json")
+WEEKS_JS = os.path.join(WEEKS_DIR, "content.js")
+weeks_lock = threading.Lock()
+IMAGE_MODELS = ["gemini-2.5-flash-image", "gemini-3.1-flash-image-preview", "gpt-image-2"]
+
+
+def load_weeks():
+    try:
+        with open(WEEKS_JSON, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
+def save_weeks(data):
+    """weeks/content.json(원본)과 weeks/content.js(사이트가 읽는 파일)를 함께 저장. 저장할 수 없으면 False"""
+    try:
+        os.makedirs(WEEKS_DIR, exist_ok=True)
+        text = json.dumps(data, ensure_ascii=False, indent=1)
+        with open(WEEKS_JSON, "w", encoding="utf-8", newline="\n") as f:
+            f.write(text)
+        with open(WEEKS_JS, "w", encoding="utf-8", newline="\n") as f:
+            f.write("/* 주차 학습 자료 — 관리자 화면의 AI 생성 버튼으로 만들어집니다. 직접 고치지 마세요. */\n")
+            f.write("window.WEEK_CONTENT = " + text + ";\n")
+        return True
+    except OSError:  # Vercel처럼 파일을 쓸 수 없는 곳
+        return False
+
+
+def ai_json(prompt, schema, baze_key="", max_tokens=16000, refs=None):
+    """Claude(서버 키) 또는 BAZE로 JSON을 만들어 dict로 돌려줌. refs: 관리자가 올린 참고 자료"""
+    example = json.dumps(schema_example(schema), ensure_ascii=False)
+    blocks, ref_text = build_ref_blocks(refs or [])
+
+    def content(text):
+        return blocks + [{"type": "text", "text": ref_text + text}] if (blocks or ref_text) else text
+
+    if baze_key:
+        client = anthropic.Anthropic(api_key=baze_key, base_url=BAZE_BASE_URL)
+        try:
+            resp = client.messages.create(
+                model=MODEL,
+                max_tokens=max_tokens,
+                output_config={"effort": "low", "format": {"type": "json_schema", "schema": schema}},
+                messages=[{"role": "user", "content": content(prompt)}],
+            )
+        except anthropic.BadRequestError:
+            resp = client.messages.create(
+                model=MODEL,
+                max_tokens=max_tokens,
+                messages=[{"role": "user", "content": content(prompt + "\n\n다른 설명 없이 아래 형식의 JSON만 답해 주세요.\n" + example)}],
+            )
+    else:
+        client = anthropic.Anthropic()
+        resp = client.beta.messages.create(
+            model=MODEL,
+            max_tokens=max_tokens,
+            betas=["server-side-fallback-2026-07-01"],
+            fallbacks="default",
+            output_config={"effort": "low", "format": {"type": "json_schema", "schema": schema}},
+            messages=[{"role": "user", "content": content(prompt)}],
+        )
+    if resp.stop_reason == "refusal":
+        raise ValueError("AI가 이 내용은 만들지 않았습니다.")
+    if resp.stop_reason == "max_tokens":
+        raise ValueError("내용이 길어 끝까지 만들지 못했습니다. 다시 시도해 주세요.")
+    text = next((b.text for b in resp.content if b.type == "text"), "")
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        return json.loads(text[text.index("{"): text.rindex("}") + 1])
+
+
+# ----- 참고 자료 (관리자 업로드) → AI에 함께 보냄
+FILES_DIR = os.path.join(WEEKS_DIR, "files")  # .gitignore로 GitHub에 올리지 않음 (저작권 보호)
+TEXT_EXTS = {".txt", ".md", ".csv"}
+ZIP_XML_EXTS = {".pptx", ".docx", ".xlsx", ".hwpx"}
+HTML_EXTS = {".html", ".htm"}
+LEGACY_EXTS = {".ppt", ".doc", ".xls", ".hwp"}
+MAX_UPLOAD = 20 * 1024 * 1024
+MAX_REF_CHARS = 60000      # 글자 자료 전체 상한
+MAX_PDF_BYTES = 12 * 1024 * 1024  # PDF 전체 상한
+
+
+def safe_name(name):
+    base = os.path.basename(str(name or "")).strip().replace("\\", "_")
+    base = "".join(ch for ch in base if ch not in '<>:"/|?*' and ord(ch) >= 32)
+    return base[:120] or "file"
+
+
+def strip_xml(text):
+    import re
+    text = re.sub(r"</(a:p|w:p|hp:p|row|p|div|li|tr|h\d)>", "\n", text)
+    text = re.sub(r"<[^>]+>", " ", text)
+    import html as _html
+    text = _html.unescape(text)
+    text = re.sub(r"[ \t\r\f\v]+", " ", text)
+    return re.sub(r"\n\s*\n+", "\n", text).strip()
+
+
+def extract_text(path, ext):
+    """파일에서 글자만 뽑기 (표준 라이브러리만 사용). 못 읽으면 ''"""
+    import zipfile
+    if ext in TEXT_EXTS:
+        with open(path, "rb") as f:
+            raw = f.read()
+        for enc in ("utf-8-sig", "cp949", "latin-1"):
+            try:
+                return raw.decode(enc)
+            except UnicodeDecodeError:
+                continue
+        return ""
+    if ext in HTML_EXTS:
+        with open(path, "rb") as f:
+            raw = f.read().decode("utf-8", "ignore")
+        import re
+        raw = re.sub(r"(?is)<(script|style)[^>]*>.*?</\1>", " ", raw)
+        return strip_xml(raw)
+    if ext in ZIP_XML_EXTS:
+        parts = []
+        with zipfile.ZipFile(path) as z:
+            names = sorted(z.namelist())
+            if ext == ".pptx":
+                import re
+                names = sorted([n for n in names if re.match(r"ppt/(slides|notesSlides)/\w+\d+\.xml$", n)],
+                               key=lambda n: (("notes" in n), int(re.findall(r"(\d+)\.xml$", n)[0])))
+            elif ext == ".docx":
+                names = [n for n in names if n.startswith("word/") and n.endswith(".xml") and ("document" in n or "footnotes" in n)]
+            elif ext == ".xlsx":
+                names = [n for n in names if n in ("xl/sharedStrings.xml",) or n.startswith("xl/worksheets/sheet")]
+            elif ext == ".hwpx":
+                names = [n for n in names if n.startswith("Contents/section") and n.endswith(".xml")]
+            for n in names:
+                parts.append(strip_xml(z.read(n).decode("utf-8", "ignore")))
+        return "\n".join(p for p in parts if p)
+    return ""
+
+
+def week_files(key):
+    return (load_weeks().get(key) or {}).get("files") or []
+
+
+def build_ref_blocks(refs):
+    """PDF는 문서 블록으로, 나머지는 뽑아 둔 글자로 프롬프트 앞에 붙임"""
+    blocks, texts, pdf_total, chars = [], [], 0, 0
+    for r in refs:
+        path = os.path.join(ROOT, r.get("path", ""))
+        if r.get("kind") == "pdf":
+            try:
+                size = os.path.getsize(path)
+                if pdf_total + size > MAX_PDF_BYTES:
+                    continue
+                with open(path, "rb") as f:
+                    data = base64.b64encode(f.read()).decode()
+                pdf_total += size
+                blocks.append({"type": "document", "source": {"type": "base64", "media_type": "application/pdf", "data": data}, "title": r.get("name", "")})
+            except OSError:
+                continue
+        elif r.get("kind") == "text":
+            try:
+                with open(path + ".txt", encoding="utf-8") as f:
+                    t = f.read()
+            except OSError:
+                continue
+            room = MAX_REF_CHARS - chars
+            if room <= 0:
+                break
+            t = t[:room]
+            chars += len(t)
+            texts.append("[첨부 자료: %s]\n%s" % (r.get("name", ""), t))
+    if not blocks and not texts:
+        return [], ""
+    head = (
+        "다음은 교수자가 이번 주차를 위해 첨부한 수업 자료입니다. 아래 요청을 만들 때 이 자료의 내용·어휘·예문·문법 설명을 "
+        "반드시 우선 참고하고, 자료와 어긋나지 않게 만드세요. 자료에 없는 내용은 주차 주제에 맞게 보충합니다.\n\n"
+    )
+    return blocks, head + ("\n\n".join(texts) + "\n\n" if texts else "") + "----- 요청 -----\n"
+
+
+def schema_example(schema):
+    """구조화 출력이 안 될 때 프롬프트에 붙일 JSON 예시를 스키마에서 만듦"""
+    t = schema.get("type")
+    if t == "object":
+        return {k: schema_example(v) for k, v in schema.get("properties", {}).items()}
+    if t == "array":
+        return [schema_example(schema.get("items", {}))]
+    if "enum" in schema:
+        return schema["enum"][0]
+    return {"string": "…", "integer": 0, "boolean": True}.get(t, "…")
+
+
+def obj(props, required=None):
+    return {"type": "object", "properties": props, "required": required or list(props), "additionalProperties": False}
+
+
+S_STR = {"type": "string"}
+WEEK_SCHEMAS = {
+    "sentences": obj({"sentences": {"type": "array", "items": obj({
+        "type": {"type": "string", "enum": ["어휘", "문법", "문형"]},
+        "zh": S_STR, "pinyin": S_STR, "ko": S_STR, "point": S_STR,
+    })}}),
+    "assignment": obj({"title": S_STR, "desc": S_STR, "steps": {"type": "array", "items": S_STR}}),
+    "onlinequiz": obj({
+        "mc": {"type": "array", "items": obj({"q": S_STR, "choices": {"type": "array", "items": S_STR}, "answer": {"type": "integer"}, "explanation": S_STR})},
+        "ox": {"type": "array", "items": obj({"q": S_STR, "answer": {"type": "boolean"}, "explanation": S_STR})},
+        "blank": {"type": "array", "items": obj({"sentence": S_STR, "answer": S_STR, "pinyin": S_STR, "ko": S_STR})},
+        "order": {"type": "array", "items": obj({"ko": S_STR, "tokens": {"type": "array", "items": S_STR}})},
+    }),
+    "culture": obj({"slides": {"type": "array", "items": obj({"title": S_STR, "emoji": S_STR, "text": S_STR, "keyword": S_STR})}}),
+    "notes": obj({
+        "title": S_STR, "summary": S_STR,
+        "sections": {"type": "array", "items": obj({"heading": S_STR, "points": {"type": "array", "items": S_STR}})},
+        "expressions": {"type": "array", "items": obj({"zh": S_STR, "pinyin": S_STR, "ko": S_STR})},
+        "questions": {"type": "array", "items": S_STR},
+    }),
+    "livequiz": QUIZ_SCHEMA,
+}
+
+
+def week_brief(info):
+    lines = [
+        "고려대학교 교양 과목 「교양중국어2」(교양중국어1을 마친 한국인 학부생 대상)의 주차 학습 자료를 만들어 주세요.",
+        "- 주차: %s주차" % info.get("week", ""),
+        "- 주제: %s" % info.get("title", ""),
+    ]
+    if info.get("expression"):
+        lines.append("- 핵심 표현: %s" % info["expression"])
+    if info.get("note"):
+        lines.append("- 학습 포인트: %s" % info["note"])
+    if info.get("content"):
+        lines.append("- 수업 내용: %s" % " / ".join(info["content"]))
+    lines.append("- 중국어는 간체자, 병음은 성조 부호를 붙여 씁니다. 설명은 한국어로 씁니다. 초급 후반 수준에 맞춥니다.")
+    return "\n".join(lines) + "\n\n"
+
+
+def week_prompt(kind, info):
+    b = week_brief(info)
+    if kind == "sentences":
+        return b + (
+            "이 주차 주제와 관련된 중국어 예문을 정확히 50개 만들어 주세요.\n"
+            "- type은 어휘 20개, 문법 15개, 문형 15개로 나눕니다.\n"
+            "  · 어휘: 주제 관련 핵심 단어가 들어간 짧은 문장\n  · 문법: 이 주차 문법 포인트를 쓰는 문장\n  · 문형: 바꿔 말하기 연습에 좋은 회화 문형\n"
+            "- zh는 중국어 문장, pinyin은 한어병음(성조 부호), ko는 자연스러운 한국어 번역입니다.\n"
+            "- point에는 이 문장에서 익힐 단어나 문법을 한국어 10자 안팎으로 씁니다.\n"
+            "- 쉬운 것에서 어려운 것 순서로, 실제 대학생 생활에서 쓸 만한 문장으로 만듭니다."
+        )
+    if kind == "assignment":
+        return b + (
+            "이 주차에 내 줄 과제를 하나 만들어 주세요.\n"
+            "- title은 15자 이내, desc는 학생이 무엇을 어떤 형식으로 제출하는지 2문장으로 씁니다.\n"
+            "- steps는 과제를 하는 순서 3~4단계입니다. 녹음·작문·AI 도구 활용 중 이 주제에 맞는 방식을 고릅니다."
+        )
+    if kind == "onlinequiz":
+        return b + (
+            "학생이 혼자 풀어 볼 온라인 퀴즈를 만들어 주세요. 유형별로 정확히 5문항씩입니다.\n"
+            "- mc(객관식): 4지선다, answer는 정답 번호(0부터), explanation은 한국어 한 문장. 정답 위치를 섞습니다.\n"
+            "- ox: 참·거짓 문장(한국어 설명 + 중국어), answer는 true/false, explanation은 한국어 한 문장.\n"
+            "- blank(빈칸 채우기): sentence는 중국어 문장이고 빈칸을 ＿＿ 로 표시합니다. answer는 빈칸에 들어갈 중국어 정확히 2글자, pinyin과 ko는 완성 문장의 병음과 번역입니다.\n"
+            "- order(순서 맞추기): ko는 한국어 뜻, tokens는 중국어 문장을 3~6개 덩어리로 나눈 것을 올바른 순서대로 적습니다."
+        )
+    if kind == "culture":
+        return b + (
+            "이 주차 주제와 어울리는 중국 문화 정보를 슬라이드 10장으로 만들어 주세요.\n"
+            "- title은 12자 이내 제목, emoji는 내용을 나타내는 이모지 1개, text는 대학생이 흥미로워할 사실 2문장(한국어, 필요하면 중국어 단어와 병음), keyword는 관련 중국어 단어 하나(병음 포함)입니다.\n"
+            "- 정확한 사실만 쓰고, 과장하거나 고정관념을 담지 않습니다."
+        )
+    if kind == "notes":
+        return b + (
+            "이 주차 2시간 수업의 강의 노트를 만들어 주세요.\n"
+            "- title은 강의 제목, summary는 이번 수업에서 배우는 것 2~3문장입니다.\n"
+            "- sections는 도입 → 핵심 개념(2~4개) → 정리 순서로 4~6개, 각 points는 3~5개의 짧은 설명(필요하면 중국어+병음 포함)입니다.\n"
+            "- expressions는 꼭 익힐 핵심 표현 6~10개(중국어, 병음, 한국어)입니다.\n"
+            "- questions는 수업 중 학생에게 던질 확인 질문 3~5개입니다."
+        )
+    if kind == "livequiz":
+        return b + (
+            "이 주차 내용으로 휴대폰 실시간 퀴즈 8문항을 만들어 주세요.\n"
+            "- 모든 문항은 4지선다, answer는 정답 번호(0부터), 정답 위치를 섞습니다.\n"
+            "- 질문은 2줄 이내, 보기는 각 25자 이내, explanation은 정답 이유 한국어 한 문장입니다."
+        )
+    raise ValueError("알 수 없는 생성 종류입니다.")
+
+
+def clean_week_result(kind, data):
+    if kind == "sentences":
+        out = []
+        for s in data.get("sentences") or []:
+            zh = str(s.get("zh") or "").strip()
+            if zh:
+                out.append({"type": s.get("type") if s.get("type") in ("어휘", "문법", "문형") else "문형",
+                            "zh": zh[:200], "pinyin": str(s.get("pinyin") or "")[:300], "ko": str(s.get("ko") or "")[:200],
+                            "point": str(s.get("point") or "")[:60]})
+        if not out:
+            raise ValueError("문장을 만들지 못했습니다.")
+        return out[:60]
+    if kind == "assignment":
+        title = str(data.get("title") or "").strip()
+        if not title:
+            raise ValueError("과제를 만들지 못했습니다.")
+        return {"title": title[:60], "desc": str(data.get("desc") or "")[:500], "steps": [str(x)[:200] for x in (data.get("steps") or [])][:6]}
+    if kind == "onlinequiz":
+        q = {"mc": [], "ox": [], "blank": [], "order": []}
+        for m in data.get("mc") or []:
+            ch = [str(c) for c in (m.get("choices") or [])][:4]
+            try:
+                a = int(m.get("answer"))
+            except (TypeError, ValueError):
+                continue
+            if m.get("q") and len(ch) >= 2 and 0 <= a < len(ch):
+                q["mc"].append({"q": str(m["q"])[:300], "choices": ch, "answer": a, "explanation": str(m.get("explanation") or "")[:300]})
+        for o in data.get("ox") or []:
+            if o.get("q") is not None and isinstance(o.get("answer"), bool):
+                q["ox"].append({"q": str(o["q"])[:300], "answer": o["answer"], "explanation": str(o.get("explanation") or "")[:300]})
+        for b in data.get("blank") or []:
+            ans = str(b.get("answer") or "").strip()
+            if b.get("sentence") and ans:
+                q["blank"].append({"sentence": str(b["sentence"])[:200], "answer": ans[:4], "pinyin": str(b.get("pinyin") or "")[:300], "ko": str(b.get("ko") or "")[:200]})
+        for r in data.get("order") or []:
+            toks = [str(t).strip() for t in (r.get("tokens") or []) if str(t).strip()]
+            if len(toks) >= 2:
+                q["order"].append({"ko": str(r.get("ko") or "")[:200], "tokens": toks[:8]})
+        if not any(q.values()):
+            raise ValueError("퀴즈를 만들지 못했습니다.")
+        return q
+    if kind == "culture":
+        slides = []
+        for s in data.get("slides") or []:
+            if s.get("title"):
+                slides.append({"title": str(s["title"])[:40], "emoji": str(s.get("emoji") or "🏮")[:8], "text": str(s.get("text") or "")[:400], "keyword": str(s.get("keyword") or "")[:60]})
+        if not slides:
+            raise ValueError("슬라이드를 만들지 못했습니다.")
+        return slides[:12]
+    if kind == "notes":
+        if not data.get("sections"):
+            raise ValueError("강의 노트를 만들지 못했습니다.")
+        return {
+            "title": str(data.get("title") or "")[:80], "summary": str(data.get("summary") or "")[:600],
+            "sections": [{"heading": str(s.get("heading") or "")[:60], "points": [str(p)[:300] for p in (s.get("points") or [])][:8]}
+                         for s in data["sections"]][:8],
+            "expressions": [{"zh": str(e.get("zh") or "")[:100], "pinyin": str(e.get("pinyin") or "")[:150], "ko": str(e.get("ko") or "")[:100]}
+                            for e in (data.get("expressions") or [])][:12],
+            "questions": [str(q)[:200] for q in (data.get("questions") or [])][:6],
+        }
+    if kind == "livequiz":
+        qs = clean_questions(data.get("questions"))
+        if not qs:
+            raise ValueError("퀴즈를 만들지 못했습니다.")
+        return {"questions": qs}
+    return data
+
+
+def image_prompts(info):
+    topic = "%s (%s)" % (info.get("title", ""), info.get("expression", "")) if info.get("expression") else info.get("title", "")
+    style = "Japanese anime style illustration, soft cel shading, warm pastel colors, clean lines, 16:9 wide composition, no text, no letters, no captions"
+    return [
+        "%s. Korean university students cheerfully practicing Chinese conversation about the topic '%s' in a bright, modern classroom." % (style, topic),
+        "%s. A lively everyday scene in China that illustrates the topic '%s', with friendly characters and recognizable Chinese surroundings." % (style, topic),
+    ]
+
+
+def baze_generate_image(key, prompt):
+    """BAZE 이미지 생성 → (바이트, 확장자). 오래 걸리면 operation_id로 기다림"""
+    headers = {"Authorization": "Bearer " + key, "Content-Type": "application/json", "User-Agent": "kc2-course-site/1.0"}
+    last_err = None
+    for model in IMAGE_MODELS:
+        body = json.dumps({"model": model, "prompt": prompt, "number_of_images": 1, "aspect_ratio": "16:9"}).encode("utf-8")
+        req = urllib.request.Request("https://api.baze.co/v1/gateway/images/generate/", data=body, headers=headers, method="POST")
+        try:
+            with urllib.request.urlopen(req, timeout=120) as r:
+                res = json.loads(r.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            last_err = e
+            if e.code in (403, 404):  # 이 모델을 쓸 수 없으면 다음 모델
+                continue
+            raise
+        deadline = time.time() + 150
+        while res.get("status") == "processing" and time.time() < deadline:
+            time.sleep(3)
+            poll = urllib.request.Request(
+                "https://api.baze.co/v1/gateway/images/generate/%s/?model=%s" % (res["operation_id"], urllib.parse.quote(model)),
+                headers=headers,
+            )
+            with urllib.request.urlopen(poll, timeout=60) as r:
+                res = json.loads(r.read().decode("utf-8"))
+        url = ((res.get("data") or [{}])[0] or {}).get("url", "")
+        if url.startswith("data:"):
+            head, b64 = url.split(",", 1)
+            ext = "jpg" if "jpeg" in head else "png"
+            return base64.b64decode(b64), ext
+        if url.startswith("http"):
+            with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": headers["User-Agent"]}), timeout=60) as r:
+                ctype = r.headers.get("Content-Type", "")
+                return r.read(), ("jpg" if "jpeg" in ctype else "png")
+        raise ValueError("이미지를 받지 못했습니다.")
+    if last_err:
+        raise last_err
+    raise ValueError("쓸 수 있는 이미지 모델이 없습니다.")
+
+
 # ---------------------------------------------------------------- HTTP
 class Handler(SimpleHTTPRequestHandler):
     extensions_map = {
@@ -358,7 +761,8 @@ class Handler(SimpleHTTPRequestHandler):
 
     def body(self):
         n = int(self.headers.get("Content-Length") or 0)
-        if n > 1_000_000:
+        limit = 30_000_000 if self.path.startswith("/api/week/upload") else 1_000_000
+        if n > limit:
             raise ValueError("too large")
         raw = self.rfile.read(n) if n else b"{}"
         return json.loads(raw.decode("utf-8") or "{}")
@@ -472,6 +876,18 @@ class Handler(SimpleHTTPRequestHandler):
         if url.path == "/api/ai/check":
             return self.ai_check(data)
 
+        if url.path == "/api/week/generate":
+            return self.week_generate(data)
+
+        if url.path == "/api/week/save":
+            return self.week_save(data)
+
+        if url.path == "/api/week/upload":
+            return self.week_upload(data)
+
+        if url.path == "/api/week/file-delete":
+            return self.week_file_delete(data)
+
         if len(parts) >= 4 and parts[1] == "quiz":
             code, room = self.room_from(parts)
             if not room:
@@ -565,6 +981,191 @@ class Handler(SimpleHTTPRequestHandler):
             else:
                 return self.error("지금은 할 수 없는 동작입니다.", 409)
         return self.send_json({"ok": True})
+
+    # ----- 주차 학습 자료
+    def week_key(self, data):
+        try:
+            w = int(data.get("week"))
+        except (TypeError, ValueError):
+            return None
+        return str(w) if 1 <= w <= 30 else None
+
+    def week_generate(self, data):
+        if not self.host_ok(data.get("password")):
+            return self.error("교수자 비밀번호가 맞지 않습니다.", 403)
+        key = self.week_key(data)
+        if not key:
+            return self.error("주차 정보가 올바르지 않습니다.")
+        if anthropic is None:
+            return self.error("서버에 anthropic 패키지가 없습니다. 'pip install -r requirements.txt'를 실행해 주세요.", 503)
+        kind = str(data.get("kind") or "")
+        info = data.get("info") or {}
+        info["week"] = key
+        provider = "baze" if data.get("provider") == "baze" else "claude"
+        baze_key = str(data.get("bazeKey") or "").strip()[:300] or baze_server_key()
+        if provider == "baze" and not baze_key:
+            return self.error("BAZE API 키가 없습니다. 관리자 화면 › API 키에서 저장해 주세요.", 503)
+        if provider == "claude" and kind != "images" and not claude_available():
+            return self.error("서버에 Claude API 키가 없습니다. 관리자 화면 › API 키에서 BAZE 키를 쓰도록 고르세요.", 503)
+        ip = self.client_address[0]
+        now = time.time()
+        recent = [t for t in ai_calls.get(ip, []) if now - t < 3600]
+        if len(recent) >= AI_LIMIT_PER_HOUR * 3:
+            return self.error("AI 생성은 한 시간에 %d번까지 가능합니다." % (AI_LIMIT_PER_HOUR * 3), 429)
+        ai_calls[ip] = recent + [now]
+        name = "BAZE" if provider == "baze" else "Claude API"
+        try:
+            if kind == "images":
+                if not baze_key:
+                    return self.error("이미지 생성에는 BAZE API 키가 필요합니다. (Claude는 이미지를 만들지 못합니다)", 503)
+                images = []
+                for i, prompt in enumerate(image_prompts(info), 1):
+                    raw, ext = baze_generate_image(baze_key, prompt)
+                    rel = "weeks/w%02d-%d.%s" % (int(key), i, ext)
+                    try:
+                        os.makedirs(WEEKS_DIR, exist_ok=True)
+                        with open(os.path.join(ROOT, rel), "wb") as f:
+                            f.write(raw)
+                        src = rel + "?v=%d" % int(now)
+                    except OSError:  # 파일을 쓸 수 없으면 데이터로 담음
+                        src = "data:image/%s;base64,%s" % ("jpeg" if ext == "jpg" else "png", base64.b64encode(raw).decode())
+                    images.append({"src": src, "prompt": prompt})
+                result = images
+            elif kind in WEEK_SCHEMAS:
+                # 관리자가 이 주차에 올린 참고 자료를 반드시 함께 보냄
+                refs = [f for f in week_files(key) if f.get("kind") in ("pdf", "text")]
+                result = clean_week_result(kind, ai_json(week_prompt(kind, info), WEEK_SCHEMAS[kind],
+                                                         baze_key if provider == "baze" else "", refs=refs))
+            else:
+                return self.error("알 수 없는 생성 종류입니다.")
+        except anthropic.AuthenticationError:
+            return self.error("%s 키가 올바르지 않습니다." % name, 502)
+        except anthropic.PermissionDeniedError:
+            return self.error("%s 키에 이 모델을 쓸 권한이 없습니다." % name, 502)
+        except anthropic.RateLimitError:
+            return self.error("%s 사용량 한도에 걸렸습니다. 잠시 뒤에 다시 시도해 주세요." % name, 503)
+        except anthropic.APIStatusError as e:
+            return self.error("%s 오류 (%s): %s" % (name, e.status_code, e.message), 502)
+        except anthropic.APIConnectionError:
+            return self.error("%s에 연결할 수 없습니다." % name, 502)
+        except urllib.error.HTTPError as e:
+            detail = ""
+            try:
+                detail = e.read().decode("utf-8", "ignore")[:200]
+            except OSError:
+                pass
+            return self.error("BAZE 이미지 생성 오류 (%s) %s" % (e.code, detail), 502)
+        except (urllib.error.URLError, OSError):
+            return self.error("BAZE에 연결할 수 없습니다.", 502)
+        except (ValueError, KeyError, json.JSONDecodeError) as e:
+            return self.error(str(e) or "AI 응답을 읽지 못했습니다. 다시 시도해 주세요.", 502)
+        field = {"sentences": "sentences", "assignment": "assignment", "onlinequiz": "onlineQuiz", "culture": "culture",
+                 "livequiz": "liveQuiz", "images": "images", "notes": "notes"}[kind]
+        with weeks_lock:
+            allc = load_weeks()
+            wc = allc.get(key) or {}
+            wc[field] = result
+            wc["updatedAt"] = int(now)
+            allc[key] = wc
+            saved = save_weeks(allc)
+        return self.send_json({"week": key, "content": wc, "saved": saved})
+
+    def week_upload(self, data):
+        """참고 자료 업로드: weeks/files/wNN/ 에 저장하고 글자를 뽑아 둠 (GitHub에는 올리지 않음)"""
+        if not self.host_ok(data.get("password")):
+            return self.error("교수자 비밀번호가 맞지 않습니다.", 403)
+        key = self.week_key(data)
+        if not key:
+            return self.error("주차 정보가 올바르지 않습니다.")
+        name = safe_name(data.get("name"))
+        ext = os.path.splitext(name)[1].lower()
+        try:
+            raw = base64.b64decode(str(data.get("data") or "").split(",", 1)[-1])
+        except (ValueError, TypeError):
+            return self.error("파일을 읽을 수 없습니다.")
+        if not raw:
+            return self.error("빈 파일입니다.")
+        if len(raw) > MAX_UPLOAD:
+            return self.error("파일이 너무 큽니다. 20MB 이하로 올려 주세요.")
+        rel_dir = "weeks/files/w%02d" % int(key)
+        rel = rel_dir + "/" + name
+        try:
+            os.makedirs(os.path.join(ROOT, rel_dir), exist_ok=True)
+            with open(os.path.join(ROOT, rel), "wb") as f:
+                f.write(raw)
+        except OSError:
+            return self.error("이 서버에서는 파일을 저장할 수 없습니다. 이 PC에서 server.py를 켜고 http://localhost:8000 에서 올려 주세요.", 503)
+        info = {"name": name, "size": len(raw), "path": rel, "at": int(time.time())}
+        if ext == ".pdf":
+            info.update(kind="pdf", note="PDF는 AI가 파일을 직접 읽습니다.")
+        elif ext in TEXT_EXTS | ZIP_XML_EXTS | HTML_EXTS:
+            try:
+                text = extract_text(os.path.join(ROOT, rel), ext)
+            except Exception:  # 손상된 파일 등
+                text = ""
+            if text.strip():
+                with open(os.path.join(ROOT, rel) + ".txt", "w", encoding="utf-8") as f:
+                    f.write(text)
+                info.update(kind="text", chars=len(text), note="글자 %s자를 뽑아 참고합니다." % format(len(text), ","))
+            else:
+                info.update(kind="none", note="글자를 찾지 못했습니다. (그림만 있는 파일일 수 있습니다)")
+        elif ext in LEGACY_EXTS:
+            info.update(kind="none", note="예전 형식(%s)은 읽을 수 없습니다. PPTX·DOCX·XLSX·HWPX·PDF로 저장해 다시 올려 주세요." % ext)
+        else:
+            info.update(kind="none", note="지원하지 않는 형식입니다.")
+        with weeks_lock:
+            allc = load_weeks()
+            wc = allc.get(key) or {}
+            files = [f for f in (wc.get("files") or []) if f.get("name") != name]
+            files.append(info)
+            wc["files"] = files
+            allc[key] = wc
+            saved = save_weeks(allc)
+        return self.send_json({"week": key, "content": wc, "file": info, "saved": saved})
+
+    def week_file_delete(self, data):
+        if not self.host_ok(data.get("password")):
+            return self.error("교수자 비밀번호가 맞지 않습니다.", 403)
+        key = self.week_key(data)
+        name = safe_name(data.get("name"))
+        if not key:
+            return self.error("주차 정보가 올바르지 않습니다.")
+        with weeks_lock:
+            allc = load_weeks()
+            wc = allc.get(key) or {}
+            files = wc.get("files") or []
+            target = next((f for f in files if f.get("name") == name), None)
+            if target:
+                for p in (target.get("path", ""), target.get("path", "") + ".txt"):
+                    try:
+                        os.remove(os.path.join(ROOT, p))
+                    except OSError:
+                        pass
+            wc["files"] = [f for f in files if f.get("name") != name]
+            allc[key] = wc
+            saved = save_weeks(allc)
+        return self.send_json({"week": key, "content": wc, "saved": saved})
+
+    def week_save(self, data):
+        """유튜브 주소 등 직접 입력한 값 저장"""
+        if not self.host_ok(data.get("password")):
+            return self.error("교수자 비밀번호가 맞지 않습니다.", 403)
+        key = self.week_key(data)
+        if not key:
+            return self.error("주차 정보가 올바르지 않습니다.")
+        patch = data.get("patch") or {}
+        with weeks_lock:
+            allc = load_weeks()
+            wc = allc.get(key) or {}
+            for field in ("videos", "songs"):
+                if field in patch:
+                    wc[field] = [str(u).strip()[:300] for u in (patch[field] or [])][:2]
+            if patch.get("clear") in ("sentences", "assignment", "onlineQuiz", "culture", "liveQuiz", "images", "videos", "songs"):
+                wc.pop(patch["clear"], None)
+            wc["updatedAt"] = int(time.time())
+            allc[key] = wc
+            saved = save_weeks(allc)
+        return self.send_json({"week": key, "content": wc, "saved": saved})
 
     def ai_check(self, data):
         """관리자 화면의 「연결 확인」: 토큰을 쓰지 않고 키와 모델 권한만 확인"""
