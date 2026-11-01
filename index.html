@@ -1813,6 +1813,15 @@ a { color: var(--green-700); }
 .site-footer h2 { color: #fff; }
 .site-footer h2 small, .profile-bio, .footer-bottom { color: #c4d6cc; }
 .footer-bottom p { margin: 0; line-height: 1.8; }
+.notice-form.is-editing { outline: 2px solid var(--green-500); }
+.notice-options { display: flex; flex-wrap: wrap; gap: 6px 20px; }
+.popup-notices { display: grid; gap: 12px; max-height: 50vh; overflow-y: auto; margin-bottom: 16px; }
+.popup-notice { padding: 12px 14px; border-radius: 12px; background: var(--cream-100); box-shadow: var(--press); }
+.popup-notice h3 { margin: 0 0 2px; font-size: 16px; color: var(--green-800); }
+.popup-notice p { margin: 0; }
+.popup-notice .popup-notice-date { font-size: 12px; color: var(--text-soft); margin-bottom: 6px; }
+.notice-editing { margin: 0; padding: 8px 12px; border-radius: 10px; background: var(--green-100); color: var(--green-800); font-size: 14px; }
+.roster-check, .roster-check-all { width: 18px; height: 18px; accent-color: var(--green-700); }
 .site-footer .name-alt { font-family: "Noto Sans KR", "Noto Sans SC", sans-serif; font-size: 15px; font-weight: 500; color: #c4d6cc; }
 .profile-aff-en { display: block; font-size: 13px; font-weight: 400; color: #c4d6cc; font-style: italic; }
 .profile-roles { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
@@ -1936,7 +1945,7 @@ window.SITE_CONFIG = {
     semester: "2026학년도 1학기",
     // 사이트 버전 — 제목 오른쪽에 빨간 글씨로 표시됩니다.
     // 관리자 화면에서 저장할 때마다 마지막 자리가 1씩 자동으로 올라갑니다 (v1.0.0 → v1.0.1).
-    version: "v1.0.6",
+    version: "v1.0.8",
     logoText: "漢",
   },
 
@@ -3708,7 +3717,8 @@ window.SiteStore = (function () {
     t.setDate(t.getDate() + 1);
     return t.getTime();
   }
-  function openPopup() {
+  /* 팝업 틀: opts = { badge, title, html, cta: {label, href}, onToday } */
+  function openPopup(opts) {
     if (document.querySelector(".modal-backdrop")) return;
     var lastFocus = document.activeElement;
     var wrap = document.createElement("div");
@@ -3717,11 +3727,10 @@ window.SiteStore = (function () {
       '<div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">' +
       '<button class="modal-close" type="button" aria-label="닫기">×</button>' +
       '<div class="modal-body">' +
-      '<span class="badge">' + esc(pp.badge) + "</span>" +
-      '<h2 id="modal-title">' + esc(pp.title) + "</h2>" +
-      "<p>" + esc(pp.text) + "</p>" +
-      '<ul class="modal-points">' + list(pp.points, function (p) { return "<li>" + esc(p) + "</li>"; }) + "</ul>" +
-      '<a class="btn btn-primary modal-cta" href="' + esc(pp.cta.href) + '">' + esc(pp.cta.label) + "</a>" +
+      '<span class="badge">' + esc(opts.badge) + "</span>" +
+      '<h2 id="modal-title">' + esc(opts.title) + "</h2>" +
+      opts.html +
+      (opts.cta ? '<a class="btn btn-primary modal-cta" href="' + esc(opts.cta.href) + '">' + esc(opts.cta.label) + "</a>" : "") +
       "</div>" +
       '<div class="modal-foot">' +
       '<button class="modal-today" type="button">오늘 하루 보지 않기</button>' +
@@ -3729,7 +3738,7 @@ window.SiteStore = (function () {
       "</div></div>";
     document.body.appendChild(wrap);
     requestAnimationFrame(function () { wrap.classList.add("show"); });
-    wrap.querySelector(".modal-cta").focus();
+    (wrap.querySelector(".modal-cta") || wrap.querySelector(".modal-dismiss")).focus();
 
     function close() {
       document.removeEventListener("keydown", onKey);
@@ -3751,14 +3760,62 @@ window.SiteStore = (function () {
     wrap.addEventListener("click", function (e) {
       if (e.target === wrap || e.target.closest(".modal-close, .modal-dismiss, .modal-cta")) close();
       if (e.target.closest(".modal-today")) {
-        S.prefSet("popupHideUntil", tomorrowMidnight());
+        opts.onToday();
         close();
       }
     });
   }
-  if (pp && pp.enabled && S.prefGet("popupHideUntil", 0) < Date.now()) {
-    setTimeout(openPopup, pp.delay || 2500);
+
+  /* 관리자가 「팝업으로 띄우기」를 고른 공지 (오늘 하루 보지 않기로 숨긴 것 제외) */
+  function popupNotices() {
+    var hidden = S.prefGet("noticePopupHide", {});
+    return sortedNotices().filter(function (n) { return n.popup && !(hidden[n.id] > Date.now()); });
   }
+  function openNoticePopup(items) {
+    var read = S.prefGet("noticeRead", []);
+    items.forEach(function (n) { if (read.indexOf(n.id) < 0) read.push(n.id); });
+    S.prefSet("noticeRead", read);
+    updateNoticeBadge();
+    renderNotices();
+    openPopup({
+      badge: "📢 공지사항",
+      title: items.length === 1 ? items[0].title : "새 공지 " + items.length + "건",
+      html:
+        '<div class="popup-notices">' +
+        list(items, function (n) {
+          return (
+            '<article class="popup-notice">' +
+            (items.length > 1 ? "<h3>" + (n.pinned ? "📌 " : "") + esc(n.title) + "</h3>" : "") +
+            '<p class="popup-notice-date">' + esc(U.fmtDate(new Date(n.at))) + "</p>" +
+            "<p>" + esc(n.body).replace(/\n/g, "<br />") + "</p>" +
+            "</article>"
+          );
+        }) +
+        "</div>",
+      cta: { label: "공지사항 모두 보기", href: "#notice" },
+      onToday: function () {
+        var hidden = S.prefGet("noticePopupHide", {});
+        var until = tomorrowMidnight();
+        items.forEach(function (n) { hidden[n.id] = until; });
+        S.prefSet("noticePopupHide", hidden);
+      },
+    });
+  }
+  function openGuidePopup() {
+    openPopup({
+      badge: pp.badge,
+      title: pp.title,
+      html: "<p>" + esc(pp.text) + "</p>" + '<ul class="modal-points">' + list(pp.points, function (p) { return "<li>" + esc(p) + "</li>"; }) + "</ul>",
+      cta: pp.cta,
+      onToday: function () { S.prefSet("popupHideUntil", tomorrowMidnight()); },
+    });
+  }
+  /* 팝업 공지가 있으면 공지를, 없으면 기본 안내 팝업을 띄움 */
+  setTimeout(function () {
+    var items = popupNotices();
+    if (items.length) openNoticePopup(items);
+    else if (pp && pp.enabled && S.prefGet("popupHideUntil", 0) < Date.now()) openGuidePopup();
+  }, (pp && pp.delay) || 2500);
 
   /* ===================== 첫 방문 환영 폭죽 ===================== */
   function toast(text) {
@@ -4198,6 +4255,7 @@ window.SiteStore = (function () {
   var root = null;
   var currentTab = session(TAB_KEY) || "site";
   var currentSection = "hero";
+  var editingNotice = null; // 수정 중인 공지 id
 
   var TABS = [
     { id: "site", label: "사이트 정보", edit: true },
@@ -4256,35 +4314,58 @@ window.SiteStore = (function () {
       '<label class="btn btn-ghost btn-sm file-btn">CSV 불러오기<input type="file" accept=".csv,text/csv" class="roster-csv" /></label>' +
       '<button class="btn btn-ghost btn-sm" type="button" data-action="roster-from-apps">가입 회원 모두 추가</button>' +
       '<button class="btn btn-ghost btn-sm" type="button" data-action="roster-download">명단 CSV 내려받기</button>' +
+      (roster.length
+        ? '<button class="btn btn-ghost btn-sm danger" type="button" data-action="roster-del-selected">선택 삭제</button>' +
+          '<button class="btn btn-ghost btn-sm danger" type="button" data-action="roster-clear">명단 전체 삭제</button>'
+        : "") +
       "</div>" +
       '<p class="ad-help small">CSV 형식: 학번,이름,학과,이메일 (첫 줄 제목은 있어도 없어도 됩니다)</p>' +
       tableHTML(
-        ["학번", "이름", "학과", "이메일", ""],
+        [{ html: '<input type="checkbox" class="roster-check-all" aria-label="전체 선택" />' }, "학번", "이름", "학과", "이메일", ""],
         roster.map(function (s, i) {
-          return [esc(s.id), esc(s.name), esc(s.major), esc(s.email), '<button class="link-btn" type="button" data-action="roster-del" data-i="' + i + '">삭제</button>'];
+          return [
+            '<input type="checkbox" class="roster-check" data-i="' + i + '" aria-label="' + esc(s.name) + ' 선택" />',
+            esc(s.id), esc(s.name), esc(s.major), esc(s.email),
+            '<button class="link-btn" type="button" data-action="roster-del" data-i="' + i + '">삭제</button>',
+          ];
         }),
         "등록된 수강생이 없습니다. (지금은 누구나 학번·이름으로 로그인할 수 있습니다)"
       )
     );
   }
   function tabNotices() {
-    var items = S.getNotices().slice().sort(function (a, b) { return a.at < b.at ? 1 : -1; });
+    var items = S.getNotices().slice().sort(function (a, b) {
+      if (!!b.pinned !== !!a.pinned) return b.pinned ? 1 : -1;
+      return a.at < b.at ? 1 : -1;
+    });
+    var ed = editingNotice && items.filter(function (n) { return n.id === editingNotice; })[0];
+    if (!ed) editingNotice = null;
     return (
-      '<form class="notice-form" novalidate>' +
-      '<label class="ed-field"><span>제목</span><input name="title" /></label>' +
-      '<label class="ed-field"><span>내용</span><textarea name="body" rows="5"></textarea></label>' +
-      '<label class="ed-check"><input type="checkbox" name="pinned" /> 맨 위에 고정</label>' +
-      '<button class="btn btn-primary btn-sm" type="submit">공지 올리기</button>' +
+      '<form class="notice-form' + (ed ? " is-editing" : "") + '" novalidate>' +
+      (ed ? '<p class="notice-editing">✏️ 공지 수정 중: <b>' + esc(ed.title) + "</b></p>" : "") +
+      '<label class="ed-field"><span>제목</span><input name="title" value="' + esc(ed ? ed.title : "") + '" /></label>' +
+      '<label class="ed-field"><span>내용</span><textarea name="body" rows="5">' + esc(ed ? ed.body : "") + "</textarea></label>" +
+      '<div class="notice-options">' +
+      '<label class="ed-check"><input type="checkbox" name="pinned"' + (ed && ed.pinned ? " checked" : "") + " /> 📌 맨 위에 고정</label>" +
+      '<label class="ed-check"><input type="checkbox" name="popup"' + (ed && ed.popup ? " checked" : "") + " /> 🔔 사이트에 들어오면 팝업으로 띄우기</label>" +
+      "</div>" +
+      '<div class="ad-actions">' +
+      '<button class="btn btn-primary btn-sm" type="submit">' + (ed ? "수정 저장" : "공지 올리기") + "</button>" +
+      (ed ? '<button class="btn btn-ghost btn-sm" type="button" data-action="notice-cancel">수정 취소</button>' : "") +
+      "</div>" +
       '<p class="form-msg notice-msg" aria-live="polite"></p>' +
       "</form>" +
       tableHTML(
-        ["게시일", "제목", "고정", ""],
+        ["게시일", "제목", "고정", "팝업", ""],
         items.map(function (n) {
           return [
-            esc(fmtTime(n.at)),
-            esc(n.title),
-            n.pinned ? "고정" : "",
-            '<button class="link-btn" type="button" data-action="notice-pin" data-id="' + esc(n.id) + '">' + (n.pinned ? "고정 해제" : "고정") + "</button> " +
+            esc(fmtTime(n.at)) + (n.editedAt ? '<br /><small>수정 ' + esc(fmtTime(n.editedAt)) + "</small>" : ""),
+            (n.pinned ? "📌 " : "") + esc(n.title) + (n.id === editingNotice ? ' <span class="chip chip-wait">수정 중</span>' : ""),
+            n.pinned ? '<span class="chip chip-ok">고정</span>' : "",
+            n.popup ? '<span class="chip chip-ok">팝업</span>' : "",
+            '<button class="link-btn" type="button" data-action="notice-edit" data-id="' + esc(n.id) + '">수정</button> ' +
+              '<button class="link-btn" type="button" data-action="notice-popup" data-id="' + esc(n.id) + '">' + (n.popup ? "팝업 끄기" : "팝업 켜기") + "</button> " +
+              '<button class="link-btn" type="button" data-action="notice-pin" data-id="' + esc(n.id) + '">' + (n.pinned ? "고정 해제" : "고정") + "</button> " +
               '<button class="link-btn" type="button" data-action="notice-del" data-id="' + esc(n.id) + '">삭제</button>',
           ];
         }),
@@ -4388,7 +4469,7 @@ window.SiteStore = (function () {
     if (!rows.length) return '<p class="ad-empty">' + esc(emptyText) + "</p>";
     return (
       '<div class="ad-table-wrap"><table class="ad-table ' + (cls || "") + '"><thead><tr>' +
-      list(head, function (h) { return "<th>" + esc(h) + "</th>"; }) +
+      list(head, function (h) { return "<th>" + (h && h.html ? h.html : esc(h)) + "</th>"; }) +
       "</tr></thead><tbody>" +
       list(rows, function (r) { return "<tr>" + list(r, function (c) { return "<td>" + c + "</td>"; }) + "</tr>"; }) +
       "</tbody></table></div>"
@@ -4518,6 +4599,10 @@ window.SiteStore = (function () {
         renderTab();
         return;
       }
+      if (e.target.classList.contains("roster-check-all")) {
+        root.querySelectorAll(".roster-check").forEach(function (c) { c.checked = e.target.checked; });
+        return;
+      }
       if (e.target.classList.contains("roster-csv")) return importRosterCSV(e.target);
       if (e.target.classList.contains("import-json")) return importJSON(e.target);
       onEdit(e);
@@ -4629,7 +4714,25 @@ window.SiteStore = (function () {
     var body = form.elements.body.value.trim();
     if (!title || !body) return flash(".notice-msg", !title ? "제목을 입력해 주세요." : "내용을 입력해 주세요.", "error");
     var items = S.getNotices();
-    items.push({ id: "n" + Date.now().toString(36), title: title, body: body, pinned: form.elements.pinned.checked, at: new Date().toISOString() });
+    var pinned = form.elements.pinned.checked;
+    var popup = form.elements.popup.checked;
+    if (editingNotice) {
+      items = items.map(function (n) {
+        if (n.id === editingNotice) {
+          n.title = title;
+          n.body = body;
+          n.pinned = pinned;
+          n.popup = popup;
+          n.editedAt = new Date().toISOString();
+        }
+        return n;
+      });
+      editingNotice = null;
+      S.saveNotices(items);
+      renderTab(true);
+      return flash(".notice-msg", "공지를 수정했습니다.", "ok");
+    }
+    items.push({ id: "n" + Date.now().toString(36), title: title, body: body, pinned: pinned, popup: popup, at: new Date().toISOString() });
     S.saveNotices(items);
     renderTab();
     flash(".notice-msg", "공지를 올렸습니다. 사이트 공지사항과 메뉴에 NEW로 표시됩니다.", "ok");
@@ -4724,6 +4827,21 @@ window.SiteStore = (function () {
         draft = clone(C);
         dirty = false;
         return renderTab(true);
+      case "roster-del-selected": {
+        var picked = Array.prototype.map.call(root.querySelectorAll(".roster-check:checked"), function (c) { return Number(c.getAttribute("data-i")); });
+        if (!picked.length) return flash(".roster-msg", "삭제할 학생을 먼저 체크해 주세요.", "error");
+        if (!confirm("선택한 " + picked.length + "명을 명단에서 뺄까요?")) return;
+        S.saveRoster(S.getRoster().filter(function (_, i) { return picked.indexOf(i) < 0; }));
+        renderTab(true);
+        return flash(".roster-msg", picked.length + "명을 명단에서 뺐습니다.", "ok");
+      }
+      case "roster-clear": {
+        var total = S.getRoster().length;
+        if (!confirm("수강생 명단 " + total + "명을 모두 삭제할까요? 되돌릴 수 없습니다. (회원 계정·출석·과제 기록은 그대로 남습니다)")) return;
+        S.saveRoster([]);
+        renderTab(true);
+        return flash(".roster-msg", "명단을 모두 삭제했습니다. 이제 가입한 회원은 누구나 로그인할 수 있습니다.", "ok");
+      }
       case "roster-del": {
         var roster = S.getRoster();
         var s = roster[Number(btn.getAttribute("data-i"))];
@@ -4774,14 +4892,31 @@ window.SiteStore = (function () {
       case "notice-del": {
         var id = btn.getAttribute("data-id");
         if (!confirm("이 공지를 삭제할까요?")) return;
+        if (editingNotice === id) editingNotice = null;
         S.saveNotices(S.getNotices().filter(function (n) { return n.id !== id; }));
         return renderTab(true);
       }
       case "notice-pin": {
         var nid = btn.getAttribute("data-id");
-        S.saveNotices(S.getNotices().map(function (n) { if (n.id === nid) n.pinned = !n.pinned; return n; }));
-        return renderTab(true);
+        var nowPinned = false;
+        S.saveNotices(S.getNotices().map(function (n) { if (n.id === nid) { n.pinned = !n.pinned; nowPinned = n.pinned; } return n; }));
+        renderTab(true);
+        return flash(".notice-msg", nowPinned ? "📌 공지를 맨 위에 고정했습니다." : "고정을 해제했습니다.", "ok");
       }
+      case "notice-popup": {
+        var pid = btn.getAttribute("data-id");
+        var nowPopup = false;
+        S.saveNotices(S.getNotices().map(function (n) { if (n.id === pid) { n.popup = !n.popup; nowPopup = n.popup; } return n; }));
+        renderTab(true);
+        return flash(".notice-msg", nowPopup ? "🔔 이 공지를 사이트 팝업으로 띄웁니다." : "팝업을 껐습니다.", "ok");
+      }
+      case "notice-edit":
+        editingNotice = btn.getAttribute("data-id");
+        renderTab();
+        return root.querySelector(".notice-form [name=title]").focus();
+      case "notice-cancel":
+        editingNotice = null;
+        return renderTab(true);
       case "export-json": return exportJSON();
       case "export-index": return exportIndexHTML();
       case "reset-config":
