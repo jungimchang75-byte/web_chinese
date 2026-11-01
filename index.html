@@ -1834,6 +1834,11 @@ a { color: var(--green-700); }
 .key-none { color: #a3412f; }
 .baze-key-box { display: grid; gap: 8px; }
 .baze-key-box[hidden] { display: none; }
+.key-status { margin: 0 0 12px; display: grid; gap: 6px; }
+.key-status div { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 14px; }
+.key-status dt { color: var(--text-soft); }
+.key-status dd { margin: 0; }
+.ad-card code { font-size: 12px; padding: 1px 6px; border-radius: 6px; background: var(--cream-200); overflow-wrap: anywhere; }
 .baze-docs { align-self: center; font-size: 13px; color: var(--green-700); }
 .popup-notices { display: grid; gap: 12px; max-height: 50vh; overflow-y: auto; margin-bottom: 16px; }
 .popup-notice { padding: 12px 14px; border-radius: 12px; background: var(--cream-100); box-shadow: var(--press); }
@@ -1968,7 +1973,7 @@ window.SITE_CONFIG = {
     semester: "2026학년도 1학기",
     // 사이트 버전 — 제목 오른쪽에 빨간 글씨로 표시됩니다.
     // 관리자 화면에서 저장할 때마다 마지막 자리가 1씩 자동으로 올라갑니다 (v1.0.0 → v1.0.1).
-    version: "v1.1.5",
+    version: "v1.1.6",
     logoText: "漢",
   },
 
@@ -4334,6 +4339,7 @@ window.SiteStore = (function () {
     { id: "attendance", label: "출석 현황" },
     { id: "submissions", label: "과제 제출" },
     { id: "applications", label: "회원 목록" },
+    { id: "apikeys", label: "API 키" },
     { id: "settings", label: "설정 파일" },
   ];
 
@@ -4508,6 +4514,90 @@ window.SiteStore = (function () {
       tableHTML(["회원번호", "가입 일시"].concat(appFields().map(function (f) { return f.label; })).concat([""]), applicationRows(false), "가입한 회원이 없습니다.", "wide")
     );
   }
+  /* ---------- API 키 관리 ---------- */
+  var serverHealth = null; // 퀴즈 서버 상태 (null = 아직 모름, false = 연결 안 됨)
+  function maskKey(k) {
+    return k ? "•••• " + String(k).slice(-4) : "";
+  }
+  function loadHealth() {
+    fetch("/api/health", { cache: "no-store" })
+      .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
+      .then(function (h) { serverHealth = h; }, function () { serverHealth = false; })
+      .then(function () { if (root && currentTab === "apikeys") renderTab(true); });
+  }
+  function tabApiKeys() {
+    if (serverHealth === null) loadHealth();
+    var h = serverHealth;
+    var bazeKey = S.prefGet("bazeKey", "");
+    var provider = S.prefGet("aiProvider", "") || (bazeKey && !(h && h.claude) ? "baze" : "claude");
+    var status = function (ok, yes, no) { return '<span class="chip ' + (ok ? "chip-ok" : "chip-miss") + '">' + (ok ? yes : no) + "</span>"; };
+    return (
+      '<p class="ad-help">실시간 퀴즈의 <b>AI 문제 출제</b>에 쓰는 키를 관리합니다. AI 출제는 퀴즈 서버(server.py)로 사이트를 열었을 때 작동합니다.</p>' +
+      '<div class="ad-cards">' +
+
+      '<div class="ad-card"><h4>퀴즈 서버 연결 상태</h4>' +
+      (h === null
+        ? "<p>확인하는 중…</p>"
+        : h === false
+          ? '<p>' + status(false, "", "연결 안 됨") + " 퀴즈 서버에 연결되지 않았습니다. 이 PC에서 <code>python server.py</code>를 실행한 뒤 http://localhost:8000 으로 열거나, Railway에 배포한 주소로 열어 주세요.</p>"
+          : '<dl class="key-status">' +
+            "<div><dt>퀴즈 서버</dt><dd>" + status(true, "연결됨", "") + "</dd></div>" +
+            "<div><dt>Claude API 키 (서버)</dt><dd>" + status(h.claude, "설정됨", "없음") + "</dd></div>" +
+            "<div><dt>BAZE API 키 (서버)</dt><dd>" + status(h.baze, "설정됨", "없음") + "</dd></div>" +
+            "<div><dt>BAZE API 키 (이 브라우저)</dt><dd>" + status(!!bazeKey, "저장됨 " + maskKey(bazeKey), "없음") + "</dd></div>" +
+            "<div><dt>모델</dt><dd><code>" + esc(h.model || "") + "</code></dd></div>" +
+            "</dl>") +
+      '<div class="ad-actions"><button class="btn btn-ghost btn-sm" type="button" data-action="apikey-refresh">상태 다시 확인</button></div>' +
+      "</div>" +
+
+      '<div class="ad-card"><h4>기본으로 쓸 AI 키</h4>' +
+      "<p>퀴즈 만들기 화면에서 「AI로 만들기」를 누를 때 쓸 키입니다. 퀴즈 화면에서도 바꿀 수 있습니다.</p>" +
+      '<div class="ai-provider">' +
+      '<label class="ed-check"><input type="radio" name="admin-ai-provider" value="claude"' + (provider === "claude" ? " checked" : "") + " /> Claude API 키 (서버 설정)</label>" +
+      '<label class="ed-check"><input type="radio" name="admin-ai-provider" value="baze"' + (provider === "baze" ? " checked" : "") + " /> BAZE API 키 (고려대학교 API Gateway)</label>" +
+      "</div></div>" +
+
+      '<div class="ad-card"><h4>BAZE API 키</h4>' +
+      "<p>고려대학교 API Gateway(BAZE)에서 발급받은 키를 넣습니다. 키는 <b>이 브라우저에만</b> 저장되고, 문제를 만들 때만 퀴즈 서버로 보내집니다.</p>" +
+      '<form class="apikey-form" novalidate autocomplete="off">' +
+      '<label class="ed-field"><span>BAZE API 키' + (bazeKey ? " · 지금 저장된 키 " + esc(maskKey(bazeKey)) : "") + "</span>" +
+      '<input type="password" name="bazeKey" spellcheck="false" placeholder="' + (bazeKey ? "바꾸려면 새 키 입력" : "BAZE API 키 입력") + '" /></label>' +
+      '<label class="ed-check"><input type="checkbox" class="apikey-show" /> 입력한 키 보기</label>' +
+      '<div class="ad-actions">' +
+      '<button class="btn btn-primary btn-sm" type="submit">키 저장</button>' +
+      (bazeKey ? '<button class="btn btn-ghost btn-sm" type="button" data-action="apikey-check-baze">연결 확인</button>' +
+        '<button class="btn btn-ghost btn-sm danger" type="button" data-action="apikey-clear">키 지우기</button>' : "") +
+      "</div></form>" +
+      '<p class="ad-help small"><a href="https://docs.factchat.kr/docs/korea-seoul/api-gateway/getting-started/overview#api-gateway" target="_blank" rel="noopener">BAZE 개발자 문서 ↗</a> · 주소 <code>https://api.baze.co/v1/gateway/claude</code></p>' +
+      "</div>" +
+
+      '<div class="ad-card"><h4>Claude API 키</h4>' +
+      "<p>Claude API 키는 보안을 위해 화면이 아니라 <b>퀴즈 서버의 환경변수</b> <code>ANTHROPIC_API_KEY</code>로 넣습니다. (지금까지와 같은 방식)</p>" +
+      '<p class="ad-help small">이 PC: <code>$env:ANTHROPIC_API_KEY="키"; python server.py</code> · Railway: 서비스 Variables에 추가</p>' +
+      '<div class="ad-actions"><button class="btn btn-ghost btn-sm" type="button" data-action="apikey-check-claude"' + (h && h.claude ? "" : " disabled") + ">연결 확인</button></div>" +
+      "</div>" +
+
+      "</div>" +
+      '<p class="form-msg apikey-msg" aria-live="polite"></p>'
+    );
+  }
+  function checkKey(provider) {
+    flash(".apikey-msg", (provider === "baze" ? "BAZE" : "Claude API") + " 연결을 확인하는 중…", "");
+    var pass = "";
+    try { pass = JSON.parse(sessionStorage.getItem("kc2-quiz-pass") || '""'); } catch (e) { /* 무시 */ }
+    fetch("/api/ai/check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ provider: provider, bazeKey: provider === "baze" ? S.prefGet("bazeKey", "") : "", password: pass }),
+    })
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+      .then(function (res) {
+        flash(".apikey-msg", res.ok ? "✓ " + res.d.message : res.d.error || "확인하지 못했습니다.", res.ok ? "ok" : "error");
+      }, function () {
+        flash(".apikey-msg", "퀴즈 서버에 연결되지 않아 확인할 수 없습니다. server.py로 사이트를 열어 주세요.", "error");
+      });
+  }
+
   function tabSettings() {
     return (
       '<div class="ad-cards">' +
@@ -4552,7 +4642,7 @@ window.SiteStore = (function () {
     var tab = TABS.filter(function (t) { return t.id === currentTab; })[0] || TABS[0];
     var html = {
       site: tabSite, sections: tabSections, roster: tabRoster, notices: tabNotices, attendance: tabAttendance,
-      submissions: tabSubmissions, applications: tabApplications, settings: tabSettings,
+      submissions: tabSubmissions, applications: tabApplications, apikeys: tabApiKeys, settings: tabSettings,
     }[tab.id]();
     main.innerHTML = "<h3 class=\"ad-title\">" + esc(tab.label) + "</h3>" + html;
     root.querySelectorAll(".ad-tabs button").forEach(function (b) {
@@ -4668,6 +4758,14 @@ window.SiteStore = (function () {
         renderTab();
         return;
       }
+      if (e.target.name === "admin-ai-provider") {
+        S.prefSet("aiProvider", e.target.value);
+        return flash(".apikey-msg", "기본 AI 키를 " + (e.target.value === "baze" ? "BAZE API 키" : "Claude API 키") + "로 정했습니다.", "ok");
+      }
+      if (e.target.classList.contains("apikey-show")) {
+        root.querySelector(".apikey-form [name=bazeKey]").type = e.target.checked ? "text" : "password";
+        return;
+      }
       if (e.target.classList.contains("roster-check-all")) {
         root.querySelectorAll(".roster-check").forEach(function (c) { c.checked = e.target.checked; });
         return;
@@ -4681,6 +4779,14 @@ window.SiteStore = (function () {
       if (e.target.classList.contains("roster-form")) addRosterFromForm(e.target);
       if (e.target.classList.contains("notice-form")) addNotice(e.target);
       if (e.target.classList.contains("pw-form")) changePassword(e.target);
+      if (e.target.classList.contains("apikey-form")) {
+        var key = e.target.elements.bazeKey.value.trim();
+        if (!key) return flash(".apikey-msg", "BAZE API 키를 입력해 주세요.", "error");
+        S.prefSet("bazeKey", key);
+        S.prefSet("aiProvider", "baze");
+        renderTab(true);
+        return flash(".apikey-msg", "BAZE API 키를 저장하고 기본 AI 키로 정했습니다. 「연결 확인」으로 키가 맞는지 확인해 보세요.", "ok");
+      }
     });
     root.addEventListener("keydown", function (e) {
       if (e.key === "Escape") closePanel();
@@ -4991,6 +5097,17 @@ window.SiteStore = (function () {
       case "notice-cancel":
         editingNotice = null;
         return renderTab(true);
+      case "apikey-refresh":
+        serverHealth = null;
+        return renderTab(true);
+      case "apikey-clear":
+        if (!confirm("이 브라우저에 저장된 BAZE API 키를 지울까요?")) return;
+        S.prefSet("bazeKey", "");
+        if (S.prefGet("aiProvider", "") === "baze") S.prefSet("aiProvider", "claude");
+        renderTab(true);
+        return flash(".apikey-msg", "BAZE API 키를 지웠습니다.", "ok");
+      case "apikey-check-baze": return checkKey("baze");
+      case "apikey-check-claude": return checkKey("claude");
       case "export-json": return exportJSON();
       case "export-index": return exportIndexHTML();
       case "reset-config":

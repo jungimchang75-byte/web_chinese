@@ -16,6 +16,8 @@ import secrets
 import socket
 import threading
 import time
+import urllib.error
+import urllib.request
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
@@ -40,6 +42,7 @@ ai_calls = {}  # ip -> [timestamps]
 # BAZE(고려대학교 API Gateway)의 Anthropic Messages API 호환 주소
 # https://docs.factchat.kr/docs/korea-seoul/api-gateway/getting-started/overview
 BAZE_BASE_URL = "https://api.baze.co/v1/gateway/claude"
+BAZE_MODELS_URL = "https://api.baze.co/v1/gateway/models/"  # 키·모델 권한 확인용 (토큰 사용 없음)
 
 
 def claude_available():
@@ -466,6 +469,9 @@ class Handler(SimpleHTTPRequestHandler):
         if url.path == "/api/ai/questions":
             return self.ai_questions(data)
 
+        if url.path == "/api/ai/check":
+            return self.ai_check(data)
+
         if len(parts) >= 4 and parts[1] == "quiz":
             code, room = self.room_from(parts)
             if not room:
@@ -559,6 +565,44 @@ class Handler(SimpleHTTPRequestHandler):
             else:
                 return self.error("지금은 할 수 없는 동작입니다.", 409)
         return self.send_json({"ok": True})
+
+    def ai_check(self, data):
+        """관리자 화면의 「연결 확인」: 토큰을 쓰지 않고 키와 모델 권한만 확인"""
+        if not self.host_ok(data.get("password")):
+            return self.error("교수자 비밀번호가 맞지 않습니다.", 403)
+        if data.get("provider") == "baze":
+            key = str(data.get("bazeKey") or "").strip()[:300] or baze_server_key()
+            if not key:
+                return self.error("BAZE API 키가 없습니다.", 400)
+            req = urllib.request.Request(
+                BAZE_MODELS_URL + MODEL + "/",
+                headers={"Authorization": "Bearer " + key, "Accept": "application/json"},
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=15) as r:
+                    r.read()
+                return self.send_json({"ok": True, "message": "BAZE 키가 맞습니다. %s 모델을 쓸 수 있습니다." % MODEL})
+            except urllib.error.HTTPError as e:
+                if e.code in (401, 403):
+                    return self.error("BAZE 키가 올바르지 않거나 권한이 없습니다. (%s)" % e.code, 502)
+                if e.code == 404:
+                    return self.error("BAZE 키는 맞지만 %s 모델을 쓸 수 없습니다." % MODEL, 502)
+                return self.error("BAZE 확인 중 오류가 났습니다. (%s)" % e.code, 502)
+            except (urllib.error.URLError, OSError):
+                return self.error("BAZE에 연결할 수 없습니다. 인터넷 연결을 확인해 주세요.", 502)
+        if not claude_available():
+            return self.error("서버에 Claude API 키(ANTHROPIC_API_KEY)가 없습니다.", 400)
+        try:
+            anthropic.Anthropic().models.retrieve(MODEL)
+        except anthropic.AuthenticationError:
+            return self.error("Claude API 키가 올바르지 않습니다.", 502)
+        except anthropic.NotFoundError:
+            return self.error("Claude API 키는 맞지만 %s 모델을 쓸 수 없습니다." % MODEL, 502)
+        except anthropic.APIStatusError as e:
+            return self.error("Claude API 확인 중 오류가 났습니다. (%s)" % e.status_code, 502)
+        except anthropic.APIConnectionError:
+            return self.error("Claude API에 연결할 수 없습니다.", 502)
+        return self.send_json({"ok": True, "message": "Claude API 키가 맞습니다. %s 모델을 쓸 수 있습니다." % MODEL})
 
     def ai_questions(self, data):
         if not self.host_ok(data.get("password")):
