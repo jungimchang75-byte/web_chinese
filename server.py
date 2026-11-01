@@ -32,6 +32,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 PORT = int(os.environ.get("PORT", "8000"))
 HOST_PASSWORD = os.environ.get("QUIZ_HOST_PASSWORD", "")
 MODEL = "claude-opus-5-5"
+NOTE_SLIDES = 20  # 강의 노트 슬라이드 기본 장수
 ROOM_TTL = 6 * 3600  # 6시간 지난 방은 정리
 MAX_PLAYERS = 200
 AI_LIMIT_PER_HOUR = 20
@@ -538,7 +539,7 @@ WEEK_SCHEMAS = {
         "blank": {"type": "array", "items": obj({"sentence": S_STR, "answer": S_STR, "pinyin": S_STR, "ko": S_STR})},
         "order": {"type": "array", "items": obj({"ko": S_STR, "tokens": {"type": "array", "items": S_STR}})},
     }),
-    "culture": obj({"slides": {"type": "array", "items": obj({"title": S_STR, "emoji": S_STR, "text": S_STR,
+    "culture": obj({"slides": {"type": "array", "items": obj({"title": S_STR, "emoji": S_STR, "text": S_STR, "image": S_STR,
                                                                "points": {"type": "array", "items": S_STR},
                                                                "keyword": S_STR, "phrase": S_STR})}}),
     "notes": obj({
@@ -546,6 +547,8 @@ WEEK_SCHEMAS = {
         "sections": {"type": "array", "items": obj({"heading": S_STR, "points": {"type": "array", "items": S_STR}})},
         "expressions": {"type": "array", "items": obj({"zh": S_STR, "pinyin": S_STR, "ko": S_STR})},
         "questions": {"type": "array", "items": S_STR},
+        "slides": {"type": "array", "items": obj({"emoji": S_STR, "title": S_STR, "points": {"type": "array", "items": S_STR},
+                                                   "image": S_STR, "zh": S_STR, "pinyin": S_STR, "ko": S_STR})},
     }),
     "livequiz": QUIZ_SCHEMA,
 }
@@ -599,6 +602,7 @@ def week_prompt(kind, info):
             "- title은 12자 이내 제목, emoji는 내용을 나타내는 이모지 1개입니다.\n"
             "- text는 대학생이 흥미로워할 사실과 배경(유래·숫자·예시)을 담은 3문장(한국어, 필요하면 중국어 단어와 병음)입니다.\n"
             "- points는 더 알아두면 좋은 짧은 사실 3개(각 40자 이내)입니다.\n"
+            "- image는 이 장에 넣을 그림 장면을 영어 한 문장으로 묘사합니다(사람·장소·사물 위주, 글자가 없는 장면).\n"
             "- keyword는 관련 중국어 단어 하나(병음 포함), phrase는 그 주제로 쓸 수 있는 짧은 중국어 문장 하나를 '중국어 병음 — 한국어 뜻' 형식으로 적습니다.\n"
             "- 정확한 사실만 쓰고, 과장하거나 고정관념을 담지 않습니다."
         )
@@ -608,7 +612,13 @@ def week_prompt(kind, info):
             "- title은 강의 제목, summary는 이번 수업에서 배우는 것 2~3문장입니다.\n"
             "- sections는 도입 → 핵심 개념(2~4개) → 정리 순서로 4~6개, 각 points는 3~5개의 짧은 설명(필요하면 중국어+병음 포함)입니다.\n"
             "- expressions는 꼭 익힐 핵심 표현 6~10개(중국어, 병음, 한국어)입니다.\n"
-            "- questions는 수업 중 학생에게 던질 확인 질문 3~5개입니다."
+            "- questions는 수업 중 학생에게 던질 확인 질문 3~5개입니다.\n"
+            "- slides는 이 노트로 수업할 때 화면에 띄울 슬라이드 정확히 " + str(NOTE_SLIDES) + "장입니다.\n"
+            "  1장 표지(강의 제목과 학습 목표) → 2장 오늘의 수업 흐름 → 도입 → 핵심 개념마다 '설명 → 예문 → 바꿔 말하기 연습' 여러 장 → "
+            "끝에서 3장은 핵심 표현 정리, 확인 질문, 다음 시간 예고·과제 안내 순서로 만듭니다.\n"
+            "  각 장의 emoji는 이모지 1개, title은 15자 이내, points는 화면에 띄울 짧은 설명 2~4개(각 50자 이내)입니다. "
+            "zh·pinyin·ko는 그 장의 대표 예문(중국어, 성조 부호 병음, 한국어)이며 예문이 어울리지 않는 장은 빈 문자열로 둡니다.\n"
+            "  image는 모든 장에 그 장 내용을 보여 주는 그림 장면을 영어 한 문장으로 적습니다(사람·장소·사물 위주, 글자가 없는 장면)."
         )
     if kind == "livequiz":
         return b + (
@@ -667,7 +677,8 @@ def clean_week_result(kind, data):
             if s.get("title"):
                 slides.append({"title": str(s["title"])[:40], "emoji": str(s.get("emoji") or "🏮")[:8], "text": str(s.get("text") or "")[:700],
                                "points": [str(x)[:120] for x in (s.get("points") or []) if str(x).strip()][:4],
-                               "keyword": str(s.get("keyword") or "")[:60], "phrase": str(s.get("phrase") or "")[:200]})
+                               "keyword": str(s.get("keyword") or "")[:60], "phrase": str(s.get("phrase") or "")[:200],
+                               "image": str(s.get("image") or "")[:300]})
         if not slides:
             raise ValueError("슬라이드를 만들지 못했습니다.")
         return slides[:12]
@@ -681,6 +692,11 @@ def clean_week_result(kind, data):
             "expressions": [{"zh": str(e.get("zh") or "")[:100], "pinyin": str(e.get("pinyin") or "")[:150], "ko": str(e.get("ko") or "")[:100]}
                             for e in (data.get("expressions") or [])][:12],
             "questions": [str(q)[:200] for q in (data.get("questions") or [])][:6],
+            "slides": [{"emoji": str(s.get("emoji") or "📘")[:8], "title": str(s.get("title") or "")[:60],
+                        "points": [str(p)[:200] for p in (s.get("points") or []) if str(p).strip()][:5],
+                        "zh": str(s.get("zh") or "")[:150], "pinyin": str(s.get("pinyin") or "")[:250], "ko": str(s.get("ko") or "")[:150],
+                        "image": str(s.get("image") or "")[:300]}
+                       for s in (data.get("slides") or []) if s.get("title")][:30],
         }
     if kind == "livequiz":
         qs = clean_questions(data.get("questions"))
@@ -697,6 +713,24 @@ def image_prompts(info):
         "%s. Korean university students cheerfully practicing Chinese conversation about the topic '%s' in a bright, modern classroom." % (style, topic),
         "%s. A lively everyday scene in China that illustrates the topic '%s', with friendly characters and recognizable Chinese surroundings." % (style, topic),
     ]
+
+
+IMAGE_STYLE = "Japanese anime style illustration, soft cel shading, warm pastel colors, clean lines, 16:9 wide composition, no text, no letters, no captions"
+
+
+def slide_image_targets(wc, target):
+    """그림을 넣을 슬라이드 번호: 모든 장에 1장씩"""
+    slides = (wc.get("culture") or []) if target == "culture" else ((wc.get("notes") or {}).get("slides") or [])
+    return list(range(len(slides)))
+
+
+def slide_image_prompt(info, slide):
+    topic = info.get("title", "")
+    scene = str(slide.get("image") or "").strip()
+    if not scene:
+        scene = "A scene that illustrates '%s' (%s) for Korean university students learning Chinese, set in China" % (
+            slide.get("title", ""), " / ".join((slide.get("points") or [])[:2]) or str(slide.get("text") or "")[:120])
+    return "%s. Lesson topic: %s. %s" % (IMAGE_STYLE, topic, scene)
 
 
 def baze_generate_image(key, prompt):
@@ -1014,7 +1048,7 @@ class Handler(SimpleHTTPRequestHandler):
         baze_key = str(data.get("bazeKey") or "").strip()[:300] or baze_server_key()
         if provider == "baze" and not baze_key:
             return self.error("BAZE API 키가 없습니다. 관리자 화면 › API 키에서 저장해 주세요.", 503)
-        if provider == "claude" and kind != "images" and not claude_available():
+        if provider == "claude" and kind not in ("images", "slideimage") and not claude_available():
             return self.error("서버에 Claude API 키가 없습니다. 관리자 화면 › API 키에서 BAZE 키를 쓰도록 고르세요.", 503)
         ip = self.client_address[0]
         now = time.time()
@@ -1023,6 +1057,8 @@ class Handler(SimpleHTTPRequestHandler):
             return self.error("AI 생성은 한 시간에 %d번까지 가능합니다." % (AI_LIMIT_PER_HOUR * 3), 429)
         ai_calls[ip] = recent + [now]
         name = "BAZE" if provider == "baze" else "Claude API"
+        if kind == "slideimage":
+            return self.slide_image(key, data, info, baze_key, now)
         try:
             if kind == "images":
                 if not baze_key:
@@ -1074,6 +1110,48 @@ class Handler(SimpleHTTPRequestHandler):
             allc = load_weeks()
             wc = allc.get(key) or {}
             wc[field] = result
+            wc["updatedAt"] = int(now)
+            allc[key] = wc
+            saved = save_weeks(allc)
+        return self.send_json({"week": key, "content": wc, "saved": saved})
+
+    def slide_image(self, key, data, info, baze_key, now):
+        """강의 노트·문화 슬라이드의 한 장에 넣을 그림 1장 생성 (target: notes|culture, index: 몇 번째 장)"""
+        target = "culture" if data.get("target") == "culture" else "notes"
+        if data.get("list"):  # 그림을 넣을 장 번호만 알려 줌
+            return self.send_json({"targets": slide_image_targets(load_weeks().get(key) or {}, target)})
+        if not baze_key:
+            return self.error("그림 생성에는 BAZE API 키가 필요합니다. (Claude는 그림을 만들지 못합니다)", 503)
+        try:
+            idx = int(data.get("index"))
+        except (TypeError, ValueError):
+            return self.error("슬라이드 번호가 올바르지 않습니다.")
+        wc = load_weeks().get(key) or {}
+        slides = (wc.get("culture") or []) if target == "culture" else ((wc.get("notes") or {}).get("slides") or [])
+        if not 0 <= idx < len(slides):
+            return self.error("먼저 %s를 만들어 주세요." % ("문화 슬라이드" if target == "culture" else "강의 노트"))
+        try:
+            raw, ext = baze_generate_image(baze_key, slide_image_prompt(info, slides[idx]))
+        except urllib.error.HTTPError as e:
+            return self.error("BAZE 이미지 생성 오류 (%s)" % e.code, 502)
+        except (urllib.error.URLError, OSError):
+            return self.error("BAZE에 연결할 수 없습니다.", 502)
+        except ValueError as e:
+            return self.error(str(e), 502)
+        rel = "weeks/w%02d-%s-%02d.%s" % (int(key), "c" if target == "culture" else "n", idx + 1, ext)
+        try:
+            os.makedirs(WEEKS_DIR, exist_ok=True)
+            with open(os.path.join(ROOT, rel), "wb") as f:
+                f.write(raw)
+            src = rel + "?v=%d" % int(now)
+        except OSError:
+            src = "data:image/%s;base64,%s" % ("jpeg" if ext == "jpg" else "png", base64.b64encode(raw).decode())
+        with weeks_lock:
+            allc = load_weeks()
+            wc = allc.get(key) or {}
+            cur = (wc.get("culture") or []) if target == "culture" else ((wc.get("notes") or {}).get("slides") or [])
+            if 0 <= idx < len(cur):
+                cur[idx]["img"] = src
             wc["updatedAt"] = int(now)
             allc[key] = wc
             saved = save_weeks(allc)
