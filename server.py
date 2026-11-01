@@ -1141,7 +1141,9 @@ class Handler(SimpleHTTPRequestHandler):
         ip = self.client_address[0]
         now = time.time()
         recent = [t for t in ai_calls.get(ip, []) if now - t < 3600]
-        if len(recent) >= AI_LIMIT_PER_HOUR * 3:
+        # 이 PC(localhost)에서 하는 「모든 주차 한 번에 만들기」는 수십 번 부르므로 한도를 두지 않음
+        local = ip in ("127.0.0.1", "::1", "::ffff:127.0.0.1")
+        if not local and len(recent) >= AI_LIMIT_PER_HOUR * 3:
             return self.error("AI 생성은 한 시간에 %d번까지 가능합니다." % (AI_LIMIT_PER_HOUR * 3), 429)
         ai_calls[ip] = recent + [now]
         name = "BAZE" if provider == "baze" else "Claude API"
