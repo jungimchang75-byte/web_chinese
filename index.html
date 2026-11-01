@@ -1601,6 +1601,262 @@ button.btn-ghost { border: 1px solid var(--line); }
   html { scroll-behavior: auto; }
   * { transition: none !important; }
 }
+
+/* =====================================================================
+   디자인 테마 — 크림 + 짙은 초록, 부드러운 입체(뉴모피즘) 스타일
+   색과 그림자는 아래 :root 값만 바꾸면 사이트 전체에 적용됩니다.
+   ===================================================================== */
+:root {
+  --green-900: #163a31;
+  --green-800: #1d4f45;
+  --green-700: #1f5547;
+  --green-500: #3b7a68;
+  --green-200: #cfe0d6;
+  --green-100: #e2ece5;
+  --cream-50: #f6f2ea;
+  --cream-100: #efe9df;
+  --cream-200: #e7e0d3;
+  --cream-300: #d9d0bf;
+
+  /* 기존 이름의 색을 새 팔레트로 연결 */
+  --brown-900: #1f2a26;
+  --brown-700: var(--green-700);
+  --brown-500: var(--green-500);
+  --ochre-700: var(--green-700);
+  --ochre-500: var(--green-500);
+  --ochre-300: #a9c4b8;
+  --yellow-200: var(--green-100);
+  --yellow-100: #ebe5da;
+  --bamboo-light: var(--cream-50);
+  --bamboo-mid: var(--cream-100);
+  --bamboo-dark: var(--cream-300);
+  --ink: var(--green-800);
+  --cord: #c9bfae;
+
+  --bg: var(--cream-100);
+  --surface: #f3eee5;
+  --text: #24302c;
+  --text-soft: #66706b;
+  --accent: var(--green-700);
+  --accent-2: var(--green-500);
+  --line: rgba(255, 255, 255, 0.55);
+  --grain: linear-gradient(transparent, transparent);
+
+  --radius: 18px;
+  --radius-sm: 12px;
+  --raise: 6px 6px 14px rgba(166, 152, 128, 0.32), -6px -6px 14px rgba(255, 255, 255, 0.85);
+  --raise-hover: 10px 10px 22px rgba(166, 152, 128, 0.38), -8px -8px 18px rgba(255, 255, 255, 0.9);
+  --press: inset 3px 3px 7px rgba(166, 152, 128, 0.35), inset -3px -3px 7px rgba(255, 255, 255, 0.85);
+  --shadow: var(--raise);
+  --shadow-hover: var(--raise-hover);
+}
+
+body {
+  background:
+    radial-gradient(circle at 10% 0%, rgba(255, 255, 255, 0.7) 0, transparent 40%),
+    radial-gradient(circle at 90% 30%, rgba(207, 224, 214, 0.35) 0, transparent 45%),
+    var(--bg);
+  color: var(--text);
+}
+a { color: var(--green-700); }
+:focus-visible { outline: 3px solid var(--green-200); outline-offset: 3px; }
+
+/* 헤더 */
+.site-header { background: rgba(239, 233, 223, 0.9); }
+.site-header.scrolled { box-shadow: 0 6px 18px rgba(166, 152, 128, 0.22); border-color: transparent; }
+.brand-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  color: var(--cream-50);
+  font-size: 22px;
+  background: var(--green-700);
+  box-shadow: 4px 4px 10px rgba(29, 79, 69, 0.3), -3px -3px 8px rgba(255, 255, 255, 0.8);
+}
+.brand-text strong { color: var(--green-800); }
+.site-nav a { color: var(--text-soft); border-radius: 10px; }
+.site-nav a:hover { background: var(--surface); box-shadow: var(--raise); color: var(--green-800); }
+.site-nav a.active { background: var(--surface); color: var(--green-700); box-shadow: var(--press); }
+.admin-lock, .menu-toggle { background: var(--surface); border: 0; box-shadow: var(--raise); color: var(--green-700); }
+.menu-toggle span { background: var(--green-700); }
+.admin-lock.is-open { background: var(--green-700); color: var(--cream-50); }
+@media (max-width: 1100px) {
+  .site-nav { background: var(--surface); box-shadow: var(--raise-hover); }
+}
+
+/* 제목 · 글자 */
+.hero h1, .section-title, .qz-big, .ad-title, .cal-title, .apply-done h3, .class-head h3, .modal-body h2 { color: var(--green-800); }
+.hero-subtitle { color: var(--green-500); }
+.section-title::after {
+  width: 44px;
+  height: 4px;
+  border-radius: 4px;
+  background: var(--green-700);
+}
+.section-lead { color: var(--text-soft); }
+.section-tint { background: linear-gradient(180deg, rgba(231, 224, 211, 0.55), rgba(231, 224, 211, 0.25)); }
+
+/* 카드: 바탕에서 살짝 떠 있는 모양 */
+.card, .facts, .qz-join-box, .ad-card, .notice-form, .ed-group, .qz-qcard, .qz-reveal-box, .qz-top li, .qz-board li, .qz-chips li {
+  background: var(--surface);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: var(--raise);
+}
+.ed-group .ed-group { background: var(--cream-50); }
+.feature:hover, .week:hover, .tool:hover { box-shadow: var(--raise-hover); }
+.feature-icon, .fact-icon {
+  background: var(--surface);
+  box-shadow: var(--press);
+}
+.stat strong, .stat-value, .rate strong, .poll-total, .grading-row strong { color: var(--green-700); }
+
+/* 버튼: 짙은 초록 주 버튼 + 떠 있는 보조 버튼 */
+.btn { border-radius: 12px; }
+.btn-primary {
+  color: #fff;
+  background: var(--green-700);
+  box-shadow: 4px 4px 12px rgba(29, 79, 69, 0.32), -4px -4px 10px rgba(255, 255, 255, 0.8);
+}
+.btn-primary:hover { background: var(--green-800); }
+.btn-primary:active { box-shadow: inset 3px 3px 8px rgba(0, 0, 0, 0.25); transform: none; }
+.btn-ghost, button.btn-ghost {
+  color: var(--green-700);
+  background: var(--surface);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: var(--raise);
+}
+.btn-ghost:active { box-shadow: var(--press); transform: none; }
+.btn.is-disabled, .btn:disabled { background: var(--cream-200); color: #9a9a90; box-shadow: none; opacity: 1; }
+.btn.danger { color: #a3412f; }
+.badge { background: var(--surface); color: var(--green-700); border: 0; box-shadow: var(--raise); font-weight: 700; }
+
+/* 입력창: 안으로 눌린 모양 */
+.field input:not([type="radio"]):not([type="checkbox"]), .field select, .field textarea,
+.ed-field input, .ed-field textarea, .ad-inline input, .notice-form textarea, .ad-select select,
+.qz-sets select, .qz-qmeta select, .qz-ai select, .qz-ai .ed-field input, .qz-paste textarea, .qz-pass {
+  background: var(--cream-100);
+  border: 1px solid transparent;
+  box-shadow: var(--press);
+}
+.field input:focus, .field select:focus, .field textarea:focus, .ed-field input:focus, .ed-field textarea:focus, .ad-inline input:focus {
+  border-color: var(--green-500);
+  box-shadow: var(--press), 0 0 0 3px rgba(59, 122, 104, 0.18);
+}
+.has-error input:not([type="radio"]):not([type="checkbox"]), .has-error select, .has-error textarea { border-color: #b4483c; background: #f7ece6; }
+.choice input, .ed-check input, .poll-option input, .materials input { accent-color: var(--green-700); }
+.poll-option { background: var(--surface); border: 1px solid transparent; box-shadow: var(--raise); }
+.poll-option:has(input:checked) { box-shadow: var(--press); border-color: var(--green-500); background: var(--surface); }
+
+/* 태그 · 칩 · 막대 */
+.tag-req, .tag-hw, .tag-exam, .week-exam .week-num { color: #fff; background: var(--green-700); }
+.tag-opt, .chip-wait, .week-num { color: var(--green-700); background: var(--green-100); }
+.chip-ok { background: var(--green-500); }
+.tag-new { background: #b4483c; }
+.bar { background: var(--cream-100); box-shadow: var(--press); }
+.bar span, .poll-bar.is-top .bar span { background: linear-gradient(90deg, var(--green-500), var(--green-700)); }
+.slider-dots button::before { background: var(--cream-300); }
+.slider-dots button.active::before { background: var(--green-700); }
+.slider-btn { background: var(--surface); border: 0; box-shadow: var(--raise); color: var(--green-700); }
+.goals li::before { background: var(--green-700); }
+.notes li::marker, .week-content li::marker, .modal-points li::marker { color: var(--green-500); }
+
+/* 첫 화면 죽간: 크림색 입체 판 + 초록 글씨 */
+.slip {
+  color: var(--green-800);
+  background: var(--surface);
+  border-radius: 14px;
+  box-shadow: var(--raise);
+}
+.slips-row::before, .slips-row::after { background: linear-gradient(90deg, transparent, var(--cream-300) 6%, var(--cream-300) 94%, transparent); box-shadow: none; height: 3px; }
+.facts { border-radius: var(--radius); }
+.fact + .fact { border-left-color: var(--cream-300); }
+
+/* 커리큘럼 · 달력 */
+.week-item { padding-left: 6px; }
+.week-item::before { width: 6px; background: var(--green-700); }
+.week-exam { background: var(--surface); }
+.week-exam::before { background: var(--green-500); }
+.week-meta div { background: var(--surface); box-shadow: var(--press); }
+.video-links a { background: var(--surface); border: 0; box-shadow: var(--raise); }
+.assignment { background: var(--surface); border: 1px solid var(--green-200); box-shadow: var(--press); }
+.countdown.is-open { color: var(--green-700); background: var(--green-100); }
+.cal-day { background: transparent; }
+.cal-day:hover { box-shadow: var(--raise); border-color: transparent; }
+.cal-day.is-class { background: var(--green-100); box-shadow: var(--raise); }
+.cal-day.is-exam .cal-tag, .cal-tag { background: var(--green-700); }
+.cal-day.is-selected { box-shadow: var(--press); border-color: var(--green-500); }
+.cal-day.is-today .cal-num { background: var(--green-800); }
+.lg-class { background: var(--green-100); }
+.cal-nav { background: var(--surface); border: 0; box-shadow: var(--raise); color: var(--green-700); }
+.detail-date { color: var(--green-500); }
+.today-box { background: var(--surface); border: 1px dashed var(--green-200); }
+.today-box.is-done { background: var(--green-100); color: var(--green-700); border-color: var(--green-200); }
+.sub-item { background: var(--surface); box-shadow: var(--raise); border: 0; }
+.error-summary { background: #f7ece6; border-color: #e3b7a8; }
+
+/* 공지 · FAQ · 모달 */
+.faq-item summary::after, .week-item > summary::after { background: var(--surface); color: var(--green-700); box-shadow: var(--raise); }
+.notice-item.is-pinned { border-color: var(--green-200); }
+.modal { background: var(--surface); }
+.modal::before { background: var(--green-700); height: 6px; }
+.modal-close { background: var(--surface); box-shadow: var(--raise); color: var(--green-700); }
+.modal-foot button { background: var(--cream-100); color: var(--green-700); }
+.modal-foot button:hover { background: var(--green-100); }
+.toast { background: var(--green-800); }
+.to-top { background: var(--green-700); box-shadow: 4px 4px 12px rgba(29, 79, 69, 0.32), -4px -4px 10px rgba(255, 255, 255, 0.8); }
+.done-mark { background: var(--green-700); }
+.done-summary { background: var(--cream-100); box-shadow: var(--press); }
+.avatar { background: var(--green-700); }
+
+/* 푸터 · 관리자 · 퀴즈 상단 막대: 짙은 초록 */
+.site-footer { background: linear-gradient(180deg, var(--green-800), var(--green-900)); color: #e6efe9; }
+.site-footer h2 { color: #fff; }
+.site-footer h2 small, .profile-bio, .footer-bottom { color: #c4d6cc; }
+.footer-eyebrow, .site-footer .profile-aff, .footer-contacts dt { color: #a9d1c0; }
+.ad-head, .qz .qz-bar { background: linear-gradient(180deg, var(--green-700), var(--green-800)); }
+.ad-site, .qz-me { color: #a9d1c0; }
+.ad-tabs { background: var(--cream-200); }
+.ad-tabs button.active { background: var(--green-700); color: #fff; }
+.ad-help { background: var(--green-100); }
+.ad-table th { background: var(--cream-200); color: var(--green-800); }
+.ad-table tbody tr:hover { background: var(--green-100); }
+.ed-item { background: var(--cream-50); border-color: var(--cream-300); }
+.ed-item-head strong, .qz-qcard-head strong { background: var(--green-700); }
+.ed-tools button, .ed-add { background: var(--surface); border: 0; box-shadow: var(--raise); color: var(--green-700); }
+.ed-tools button[data-op="del"] { color: #a3412f; }
+.qz { background: var(--bg); }
+.qz-build-side { background: var(--cream-200); }
+.qz-q-head > .qz-timer { background: var(--green-700); }
+.qz-timebar { background: var(--cream-200); box-shadow: var(--press); }
+.qz-timebar span { background: linear-gradient(90deg, var(--green-500), var(--green-700)); }
+.qz-board-rank, .qz-name, .qz-rank b { color: var(--green-700); }
+.qz-dots i { background: var(--green-500); }
+.qz-paste { background: var(--surface); }
+.nav-badge { background: #b4483c; }
+
+/* 제목 앞 이모지 */
+.title-emoji {
+  display: inline-block;
+  margin-right: 10px;
+  font-size: 0.85em;
+  vertical-align: 0.05em;
+  animation: titleSway 3s ease-in-out infinite;
+  transform-origin: 50% 0;
+}
+@keyframes titleSway { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+@media (prefers-reduced-motion: reduce) { .title-emoji { animation: none; } }
+
+/* 제목 오른쪽 버전 표시 */
+.version-tag {
+  display: inline-block;
+  margin-left: 8px;
+  font-family: "Noto Sans KR", sans-serif;
+  font-size: 0.26em;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #d32f2f;
+  vertical-align: super;
+}
 </style>
 </head>
 <body>
@@ -1665,6 +1921,9 @@ window.SITE_CONFIG = {
     university: "고려대학교",
     department: "중어중문학과",
     semester: "2026학년도 1학기",
+    // 사이트 버전 — 제목 오른쪽에 빨간 글씨로 표시됩니다.
+    // 관리자 화면에서 저장할 때마다 마지막 자리가 1씩 자동으로 올라갑니다 (v1.0.0 → v1.0.1).
+    version: "v1.0.1",
     logoText: "中",
   },
 
@@ -1685,6 +1944,7 @@ window.SITE_CONFIG = {
   /* 첫 화면 */
   hero: {
     badge: "2026 상반기 집중 프로그램",
+    titleEmoji: "🏮", // 제목 앞에 붙는 이모지 (비우면 표시 안 함)
     title: "교양중국어2",
     subtitle: "AI 기반 데이터 활용능력 배양",
     description:
@@ -2334,7 +2594,11 @@ window.SiteStore = (function () {
     '<div class="hero-inner">' +
     '<div class="hero-text">' +
     '<span class="badge">' + esc(h.badge) + "</span>" +
-    '<h1 id="hero-title">' + esc(h.title) + "</h1>" +
+    '<h1 id="hero-title">' +
+    (h.titleEmoji ? '<span class="title-emoji" aria-hidden="true">' + esc(h.titleEmoji) + "</span>" : "") +
+    esc(h.title) +
+    (C.site.version ? ' <span class="version-tag" title="사이트 버전">' + esc(C.site.version) + "</span>" : "") +
+    "</h1>" +
     '<p class="hero-subtitle">' + esc(h.subtitle) + "</p>" +
     '<p class="hero-desc">' + esc(h.description) + "</p>" +
     '<div class="hero-buttons">' +
@@ -3674,6 +3938,7 @@ window.SiteStore = (function () {
   /* ---------- 내용 편집기 ---------- */
   var LABELS = {
     site: "사이트 기본 정보", title: "제목", university: "대학", department: "학과", semester: "학기", logoText: "로고 글자",
+    version: "버전 (저장할 때마다 자동으로 올라감)", titleEmoji: "제목 이모지",
     hero: "첫 화면", badge: "배지", subtitle: "부제", description: "설명", buttons: "버튼", label: "이름", href: "링크 주소",
     primary: "강조 버튼", slips: "죽간 글귀", facts: "한눈에 보기", icon: "아이콘", value: "값", unit: "단위",
     stats: "숫자 카드", intro: "프로그램 소개", lead: "섹션 설명", slides: "장점 슬라이드", text: "내용",
@@ -4092,8 +4357,18 @@ window.SiteStore = (function () {
     document.body.classList.remove("admin-open");
     document.querySelector(".admin-lock").focus();
   }
+  /* v1.2.3 → v1.2.4 (형식이 다르면 그대로 둠) */
+  function bumpVersion(v) {
+    var m = /^v?(\d+)\.(\d+)\.(\d+)$/.exec(String(v || "").trim());
+    return m ? "v" + m[1] + "." + m[2] + "." + (Number(m[3]) + 1) : v;
+  }
   function saveAndApply(message) {
     var cfg = prune(clone(draft));
+    if (cfg.site && cfg.site.version) {
+      var before = cfg.site.version;
+      cfg.site.version = bumpVersion(before);
+      if (cfg.site.version !== before) message = (message || "저장했습니다. 사이트에 적용되었습니다.") + " (버전 " + before + " → " + cfg.site.version + ")";
+    }
     if (!S.saveConfig(cfg)) {
       alert("이 브라우저에 저장할 수 없습니다. 개인정보 보호 모드인지 확인해 주세요.");
       return;
