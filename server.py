@@ -13,6 +13,7 @@ import base64
 import json
 import os
 import random
+import re
 import secrets
 import socket
 import threading
@@ -551,6 +552,10 @@ WEEK_SCHEMAS = {
                                                    "image": S_STR, "zh": S_STR, "pinyin": S_STR, "ko": S_STR})},
     }),
     "livequiz": QUIZ_SCHEMA,
+    "ytrecs": obj({
+        "videos": {"type": "array", "items": obj({"title": S_STR, "channel": S_STR, "why": S_STR, "url": S_STR, "query": S_STR})},
+        "songs": {"type": "array", "items": obj({"title": S_STR, "channel": S_STR, "why": S_STR, "url": S_STR, "query": S_STR})},
+    }),
 }
 
 
@@ -619,6 +624,16 @@ def week_prompt(kind, info):
             "  각 장의 emoji는 이모지 1개, title은 15자 이내, points는 화면에 띄울 짧은 설명 2~4개(각 50자 이내)입니다. "
             "zh·pinyin·ko는 그 장의 대표 예문(중국어, 성조 부호 병음, 한국어)이며 예문이 어울리지 않는 장은 빈 문자열로 둡니다.\n"
             "  image는 모든 장에 그 장 내용을 보여 주는 그림 장면을 영어 한 문장으로 적습니다(사람·장소·사물 위주, 글자가 없는 장면)."
+        )
+    if kind == "ytrecs":
+        return b + (
+            "이 주차 강의 주제에 맞춰 수업에서 보여 줄 유튜브 영상 4개와 중국어 노래 4개를 추천해 주세요.\n"
+            "- videos: 이 주제의 표현·문법을 익히거나 관련 중국 문화를 보여 주는 교육·문화 영상(한국 대학생 초급 학습자 수준)입니다.\n"
+            "- songs: 이 주제와 가사·분위기가 어울리고 가사가 비교적 쉬운 중국어 노래(C-pop, 동요, 인기곡 등)입니다.\n"
+            "- title은 영상·노래 제목, channel은 채널 또는 가수, why는 이 주차 수업에 좋은 이유 한 문장(한국어)입니다.\n"
+            "- url은 실제로 있는 유튜브 주소를 확실히 알 때만 적고, 조금이라도 불확실하면 빈 문자열로 둡니다. 주소를 지어내지 마세요.\n"
+            "- query는 유튜브에서 이 영상·노래를 찾을 검색어(중국어 또는 한국어)입니다.\n"
+            "- 실제로 존재하는 영상·노래만 추천합니다."
         )
     if kind == "livequiz":
         return b + (
@@ -698,12 +713,56 @@ def clean_week_result(kind, data):
                         "image": str(s.get("image") or "")[:300]}
                        for s in (data.get("slides") or []) if s.get("title")][:30],
         }
+    if kind == "ytrecs":
+        out = {}
+        for field in ("videos", "songs"):
+            items = []
+            for r in (data.get(field) or [])[:6]:
+                if not (r.get("title") or r.get("query")):
+                    continue
+                items.append({"title": str(r.get("title") or "")[:120], "channel": str(r.get("channel") or "")[:80],
+                              "why": str(r.get("why") or "")[:200], "url": str(r.get("url") or "").strip()[:200],
+                              "query": str(r.get("query") or r.get("title") or "")[:120]})
+            out[field] = items[:4]
+        verify_youtube(out["videos"] + out["songs"])
+        if not (out["videos"] or out["songs"]):
+            raise ValueError("추천을 받지 못했습니다.")
+        out["at"] = int(time.time())
+        return out
     if kind == "livequiz":
         qs = clean_questions(data.get("questions"))
         if not qs:
             raise ValueError("퀴즈를 만들지 못했습니다.")
         return {"questions": qs}
     return data
+
+
+YT_ID = re.compile(r"(?:youtu\.be/|v=|embed/|shorts/|live/)([\w-]{11})")
+
+
+def verify_youtube(items):
+    """AI가 적은 유튜브 주소가 실제로 있는지 oEmbed로 확인 (있으면 ok=True, 실제 제목으로 바꿈, 없으면 주소를 지움)"""
+    def check(item):
+        m = YT_ID.search(item.get("url") or "")
+        item["ok"] = False
+        if not m:
+            item["url"] = ""
+            return
+        url = "https://www.youtube.com/watch?v=" + m.group(1)
+        try:
+            req = urllib.request.Request("https://www.youtube.com/oembed?format=json&url=" + urllib.parse.quote(url, safe=""),
+                                         headers={"User-Agent": "kc2-course-site/1.0"})
+            with urllib.request.urlopen(req, timeout=8) as r:
+                info = json.loads(r.read().decode("utf-8"))
+            item.update({"url": url, "ok": True, "title": str(info.get("title") or item["title"])[:120],
+                         "channel": str(info.get("author_name") or item["channel"])[:80]})
+        except (urllib.error.URLError, OSError, ValueError):
+            item["url"] = ""
+    threads = [threading.Thread(target=check, args=(it,)) for it in items]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(12)
 
 
 # 저장 필드 ↔ 생성 종류 (직접 편집·AI 수정용)
@@ -1148,7 +1207,7 @@ class Handler(SimpleHTTPRequestHandler):
         except (ValueError, KeyError, json.JSONDecodeError) as e:
             return self.error(str(e) or "AI 응답을 읽지 못했습니다. 다시 시도해 주세요.", 502)
         field = {"sentences": "sentences", "assignment": "assignment", "onlinequiz": "onlineQuiz", "culture": "culture",
-                 "livequiz": "liveQuiz", "images": "images", "notes": "notes"}[kind]
+                 "livequiz": "liveQuiz", "images": "images", "notes": "notes", "ytrecs": "ytRecs"}[kind]
         with weeks_lock:
             allc = load_weeks()
             wc = allc.get(key) or {}

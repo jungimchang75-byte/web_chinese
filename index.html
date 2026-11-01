@@ -2166,6 +2166,18 @@ select.ed-in { max-width: 200px; }
 .wa-files .file-btn { justify-self: start; }
 .wa-yt-edit summary { cursor: pointer; font-weight: 700; color: var(--green-700, #1f5547); }
 .wa-yt-edit[open] { display: grid; gap: 8px; }
+.wa-rec-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0; }
+.wa-recs { display: grid; gap: 8px; align-content: start; }
+.wa-recs-h { margin: 0; font-weight: 800; color: var(--green-800, #1d4f45); }
+.wa-rec { display: flex; gap: 10px; padding: 8px; border-radius: 12px; background: var(--surface, #fff); border: 1px solid var(--line, #e2dacb); }
+.wa-rec.is-ok { border-color: #9cbf86; }
+.wa-rec-thumb { flex: none; width: 112px; aspect-ratio: 16 / 9; border-radius: 8px; object-fit: cover; background: var(--cream-100, #efe9df); }
+.wa-rec-none { display: grid; place-items: center; font-size: 22px; }
+.wa-rec-body { min-width: 0; display: grid; gap: 3px; }
+.wa-rec-body p { margin: 0; }
+.wa-rec-title { font-weight: 700; font-size: 14px; line-height: 1.4; overflow-wrap: anywhere; }
+.wa-rec-sub { font-size: 12px; color: var(--text-soft, #666); line-height: 1.4; }
+.wa-rec-act { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px !important; }
 .wa-admin .form-msg { margin: 0 !important; }
 
 @media (max-width: 600px) {
@@ -2277,7 +2289,7 @@ window.SITE_CONFIG = {
     semester: "2026학년도 1학기",
     // 사이트 버전 — 제목 오른쪽에 빨간 글씨로 표시됩니다.
     // 관리자 화면에서 저장할 때마다 마지막 자리가 1씩 자동으로 올라갑니다 (v1.0.0 → v1.0.1).
-    version: "v1.3.5",
+    version: "v1.3.6",
     logoText: "漢",
   },
 
@@ -6971,6 +6983,35 @@ window.SiteStore = (function () {
     );
   }
 
+  /* 유튜브 AI 추천 목록: 확인된 영상은 「넣기」로 빈 주소 칸에 채우고, 확인 안 된 것은 유튜브 검색으로 찾기 */
+  function recsHTML(r) {
+    if (!r) return "";
+    function group(items, f, name) {
+      if (!(items || []).length) return "";
+      return (
+        '<div class="wa-recs"><p class="wa-recs-h">' + name + "</p>" +
+        list(items, function (it) {
+          var id = ytId(it.url);
+          var search = "https://www.youtube.com/results?search_query=" + encodeURIComponent(it.query || it.title);
+          return (
+            '<div class="wa-rec' + (it.ok ? " is-ok" : "") + '">' +
+            (id ? '<img class="wa-rec-thumb" src="https://i.ytimg.com/vi/' + id + '/mqdefault.jpg" alt="" loading="lazy" />' : '<span class="wa-rec-thumb wa-rec-none" aria-hidden="true">🔎</span>') +
+            '<div class="wa-rec-body"><p class="wa-rec-title">' + (it.ok ? '<span class="chip chip-ok">✓ 확인됨</span> ' : "") + esc(it.title) + "</p>" +
+            '<p class="wa-rec-sub">' + esc(it.channel) + (it.why ? " · " + esc(it.why) : "") + "</p>" +
+            '<p class="wa-rec-act">' +
+            (it.ok
+              ? '<button type="button" class="btn btn-primary btn-sm wa-rec-use" data-f="' + f + '" data-url="' + esc(it.url) + '">＋ 넣기</button>' +
+                '<a class="btn btn-ghost btn-sm" href="' + esc(it.url) + '" target="_blank" rel="noopener">▶ 보기</a>'
+              : '<a class="btn btn-ghost btn-sm" href="' + esc(search) + '" target="_blank" rel="noopener">🔎 유튜브에서 찾기</a>') +
+            "</p></div></div>"
+          );
+        }) +
+        "</div>"
+      );
+    }
+    return '<div class="wa-grid2">' + group(r.videos, "videos", "🎬 추천 영상") + group(r.songs, "songs", "🎵 추천 노래") + "</div>";
+  }
+
   /* ---------- 관리자 도구 ---------- */
   function adminHTML(n, c) {
     if (!isAdmin()) return "";
@@ -6997,7 +7038,10 @@ window.SiteStore = (function () {
       }) +
       '<button type="button" class="btn btn-primary btn-sm wa-gen-all"' + (noServer ? " disabled" : "") + ">✨ 모두 만들기</button>" +
       "</div>" +
-      '<details class="wa-yt-edit"><summary>🎬 유튜브 영상 · 🎵 노래 주소 넣기</summary>' +
+      '<details class="wa-yt-edit"' + (c.ytRecs ? " open" : "") + '><summary>🎬 유튜브 영상 · 🎵 노래 주소 넣기</summary>' +
+      '<div class="wa-rec-bar"><button type="button" class="btn btn-ghost btn-sm wa-rec-go"' + (noServer ? " disabled" : "") + '>🤖 AI 추천 받기 (영상 4 · 노래 4)</button>' +
+      '<span class="small-note">이 주차 강의 주제로 추천합니다. ✓ 표시는 실제로 있는 영상인지 확인한 것이에요.</span></div>' +
+      recsHTML(c.ytRecs) +
       '<div class="wa-grid2">' +
       '<label class="ed-field"><span>영상 1</span><input class="wa-yt-in" data-f="videos" data-i="0" value="' + esc((c.videos || [])[0] || "") + '" placeholder="https://www.youtube.com/watch?v=…" /></label>' +
       '<label class="ed-field"><span>영상 2</span><input class="wa-yt-in" data-f="videos" data-i="1" value="' + esc((c.videos || [])[1] || "") + '" placeholder="https://youtu.be/…" /></label>' +
@@ -7570,6 +7614,17 @@ window.SiteStore = (function () {
       return generate(el, kinds);
     }
     if (t.closest(".wa-yt-save")) return saveYoutube(el);
+    if (t.closest(".wa-rec-go")) return recommendYoutube(el);
+    var use = t.closest(".wa-rec-use");
+    if (use) {
+      var f = use.getAttribute("data-f");
+      var ins = Array.prototype.slice.call(el.querySelectorAll('.wa-yt-in[data-f="' + f + '"]'));
+      var slot = ins.filter(function (x) { return !x.value.trim(); })[0];
+      if (!slot) return msg(el, (f === "videos" ? "영상" : "노래") + " 칸 2개가 모두 찼습니다. 바꿀 칸의 주소를 지운 뒤 다시 「넣기」를 누르세요.", "error");
+      slot.value = use.getAttribute("data-url");
+      slot.focus();
+      return msg(el, "주소 칸에 넣었습니다. 아래 「주소 저장」을 누르면 학생 화면에 보입니다.", "ok");
+    }
     var del = t.closest(".wa-file-del");
     if (del) {
       if (!confirm("‘" + del.getAttribute("data-name") + "’ 자료를 지울까요?")) return;
@@ -7786,6 +7841,26 @@ window.SiteStore = (function () {
         .then(function (d) { if (d) last = d; }, function (err) { errors.push(labels[k] + " — " + err.message); })
         .then(next);
     })();
+  }
+  function recommendYoutube(el) {
+    var n = el.getAttribute("data-week");
+    var btn = el.querySelector(".wa-rec-go");
+    btn.disabled = true;
+    var dig = window.SiteDig.start(el.querySelector(".wa-yt-edit"), "유튜브 영상·노래 고르는 중 · 30초쯤 걸립니다");
+    post("/api/week/generate", { week: n, kind: "ytrecs", info: info(n), provider: provider(), bazeKey: provider() === "baze" ? S.prefGet("bazeKey", "") : "", password: pass() })
+      .then(function (d) {
+        dig.stop();
+        WC[n] = d.content;
+        renderPanel(el);
+        var r = d.content.ytRecs || {};
+        var all = (r.videos || []).concat(r.songs || []);
+        var ok = all.filter(function (x) { return x.ok; }).length;
+        msg(el, "✓ 영상 " + (r.videos || []).length + "개 · 노래 " + (r.songs || []).length + "개를 추천받았습니다. 그중 " + ok + "개는 실제 영상으로 확인됐고, 나머지는 「유튜브에서 찾기」로 찾아 주세요.", "ok");
+      }, function (err) {
+        dig.stop();
+        btn.disabled = false;
+        msg(el, err.message, "error");
+      });
   }
   function saveYoutube(el) {
     var n = el.getAttribute("data-week");
